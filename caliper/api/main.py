@@ -11,10 +11,12 @@ the evidence has to be readable without logging in and without running anything.
 
 from __future__ import annotations
 
+import asyncio
+import json
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, Header, HTTPException
+from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
 from pydantic import BaseModel
@@ -23,7 +25,8 @@ from caliper import pipeline
 from caliper.api.auth import allowed_origins, auth_required, resolve_operator
 from caliper.export import rcx_workbook
 from caliper.orchestrator.gate import GateNotSatisfied
-from caliper.orchestrator.run_state import IllegalTransition, RunStore
+from caliper.orchestrator.run_state import IllegalTransition, RunState, RunStore
+from caliper.voice.sonic_session import SonicSession
 
 DATA_DIR = Path(os.environ.get("CALIPER_DATA_DIR", "data/raw"))
 
@@ -242,6 +245,92 @@ def workbook(run_id: str) -> Response:
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f'attachment; filename="CALIPER_{run_id}_RCX_workbook.xlsx"'},
     )
+
+
+def _load_persona() -> dict | None:
+    path = Path("caliper/voice/personas/eob_coinsurance_confusion.yaml")
+    if not path.exists():
+        return None
+    try:
+        import yaml
+
+        return yaml.safe_load(path.read_text())
+    except Exception:  # noqa: BLE001
+        return None
+
+
+@app.websocket("/ws/practice/{run_id}")
+async def practice(ws: WebSocket, run_id: str) -> None:
+    """The live practice call, bridged between the browser and Nova 2 Sonic.
+
+    The browser sends 16 kHz sixteen bit mono PCM frames as binary messages and
+    receives JSON: transcript lines, base64 audio to play, and the scored form as
+    it fills in.
+
+    Nova generates faster than real time, so on an interruption the client MUST
+    discard audio it has already received but not yet played. The interrupted
+    event exists for exactly that and is forwarded immediately.
+    """
+    await ws.accept()
+    persona = _load_persona()
+    if persona is None:
+        await ws.send_json({"type": "error", "detail": "no persona configuration is installed"})
+        await ws.close()
+        return
+
+    session = SonicSession(persona=persona)
+    pump: asyncio.Task | None = None
+
+    try:
+        await session.open()
+
+        async def forward() -> None:
+            async for event in session.receive():
+                await ws.send_json(event)
+
+        pump = asyncio.create_task(forward())
+
+        while True:
+            message = await ws.receive()
+            if message.get("type") == "websocket.disconnect":
+                break
+            if (data := message.get("bytes")) is not None:
+                await session.send_audio(data)
+            elif (text := message.get("text")) is not None:
+                if json.loads(text).get("action") == "stop":
+                    break
+
+    except WebSocketDisconnect:
+        pass
+    except Exception as exc:  # noqa: BLE001
+        # The practice call is a demo surface. It reports what went wrong rather
+        # than closing silently, because a silent failure on stage is unreadable.
+        try:
+            await ws.send_json({"type": "error", "detail": f"{type(exc).__name__}: {exc}"})
+        except Exception:  # noqa: BLE001
+            pass
+    finally:
+        if pump:
+            pump.cancel()
+        await session.close()
+        # The score survives the call, so the run carries what actually happened.
+        try:
+            payload = store.payload(run_id)
+            if payload:
+                store.transition(
+                    run_id,
+                    RunState.PRACTICE_SCORED,
+                    actor="practice call",
+                    note="live practice scored on the rewritten item",
+                    merge={"practice_score": session.score_state.as_payload()},
+                    actor_verified=True,
+                )
+        except (KeyError, IllegalTransition):
+            pass
+        try:
+            await ws.close()
+        except Exception:  # noqa: BLE001
+            pass
 
 
 @app.get("/api/runs")
