@@ -1,0 +1,13 @@
+#!/bin/sh
+# Confidentiality and tone gates run BEFORE a commit exists, because a commit is
+# the point at which material becomes recoverable from history.
+#
+# Each gate runs on a bare exit path. No pipe, because a pipeline's exit code is
+# its last command's and `cmd | tail` silently swallows the failure.
+set -e
+
+PY=".venv/bin/python"
+[ -x "$PY" ] || PY="python3"
+
+"$PY" scripts/check_confidential.py
+"$PY" scripts/check_dashes.py
