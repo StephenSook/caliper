@@ -483,3 +483,29 @@
 */
 html, body { overflow-x: hidden; max-width: 100%; }
 .app { overflow-x: clip; }
+
+/*
+  Safe areas.
+
+  Once the page is added to a phone home screen it runs standalone, which means
+  the viewport extends under the home indicator at the bottom and, in landscape,
+  under the notch on one side. Nothing about this is visible on a desktop
+  browser or in a simulator screenshot taken in portrait, which is exactly why
+  it has to be written rather than discovered.
+
+  max() is used rather than addition so the existing padding is a floor: on a
+  device with no insets the layout is unchanged, and on one with insets the
+  larger of the two wins.
+
+  The paired meta viewport-fit=cover in index.html is what makes these values
+  resolve to anything other than zero. Removing it silently disables all of this.
+*/
+.app {
+  padding-left: max(var(--space-4), env(safe-area-inset-left));
+  padding-right: max(var(--space-4), env(safe-area-inset-right));
+  padding-bottom: max(var(--space-6), calc(env(safe-area-inset-bottom) + var(--space-4)));
+}
+
+.masthead {
+  top: env(safe-area-inset-top, 0px);
+}

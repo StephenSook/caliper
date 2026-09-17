@@ -21,6 +21,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from caliper import pipeline
 from caliper.api.auth import (
@@ -405,6 +406,42 @@ def judge_door() -> HTMLResponse:
 # cross origin problem for either fetch or the WebSocket. It is also the only
 # way a phone gets a microphone at all: getUserMedia needs a secure context, and
 # a laptop's LAN address over plain HTTP is not one.
+class _SPAFiles(StaticFiles):
+    """Static files with a single page fallback, scoped so it cannot lie.
+
+    The interface is one React state machine rather than a set of server routes,
+    so a deep link such as /practice has no file behind it. Without a fallback a
+    judge who scans a QR code aimed at a deep link gets a bare 404.
+
+    The fallback is deliberately narrow, because a permissive one is worse than
+    none:
+
+      - anything under api/ or ws keeps its real status. Serving index.html for
+        a mistyped API path would turn a 404 into an HTML 200, which is the
+        false green shape: a caller checking the status code would conclude the
+        endpoint exists.
+      - anything that looks like a file (it has an extension) keeps its 404. A
+        missing icon must not come back as HTML, or the service worker caches a
+        page under an image URL and the failure becomes sticky.
+
+    Everything else is a client route and gets the shell.
+    """
+
+    _NEVER_FALL_BACK = ("api/", "ws")
+
+    async def get_response(self, path: str, scope):  # type: ignore[override]
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            if exc.status_code != 404:
+                raise
+            if path.startswith(self._NEVER_FALL_BACK):
+                raise
+            if "." in path.rsplit("/", 1)[-1]:
+                raise
+            return await super().get_response("index.html", scope)
+
+
 _DIST = Path("frontend/dist")
 if _DIST.is_dir():
-    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="interface")
+    app.mount("/", _SPAFiles(directory=str(_DIST), html=True), name="interface")

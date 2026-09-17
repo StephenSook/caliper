@@ -1,0 +1,33 @@
+{
+  "name": "CALIPER: audit the instrument before you grade the agent",
+  "short_name": "CALIPER",
+  "description": "Measures whether a quality assurance scorecard is good enough to draw a conclusion from, before any training is designed against it.",
+  "id": "/",
+  "start_url": "/?source=pwa",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#0a0b0d",
+  "theme_color": "#0a0b0d",
+  "categories": ["business", "education", "productivity"],
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    {
+      "name": "Take the practice call",
+      "short_name": "Practice",
+      "description": "Speak to the synthetic member and watch the rewritten form score the turn.",
+      "url": "/practice?source=pwa-shortcut"
+    },
+    {
+      "name": "Judge door",
+      "short_name": "Judge",
+      "description": "The three minute itinerary, no credential required.",
+      "url": "/judge"
+    }
+  ]
+}

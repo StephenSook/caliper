@@ -25,6 +25,45 @@ export default function App() {
 
   const still = new URLSearchParams(window.location.search).has("still");
 
+  /*
+    Handset mode.
+
+    A practice call is a headset activity in real life, so the phone is the
+    correct form factor for it rather than a second copy of the product. Reached
+    by /practice or /?screen=practice, this renders the call and nothing else,
+    and attaches itself to whatever run the laptop already started so nobody has
+    to type a run id at a judging table.
+
+    The run id is resolved from the server, never guessed, and when there is no
+    run the screen says so plainly instead of opening a socket that cannot work.
+  */
+  const params = new URLSearchParams(window.location.search);
+  const handset =
+    params.get("screen") === "practice" || window.location.pathname === "/practice";
+  const [handsetRun, setHandsetRun] = useState<string | null>(params.get("run"));
+  const [handsetError, setHandsetError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!handset || handsetRun) return;
+    let cancelled = false;
+    api
+      .latestRun()
+      .then((r) => {
+        if (cancelled) return;
+        if (r.latest_run_id) setHandsetRun(r.latest_run_id);
+        else
+          setHandsetError(
+            "No run has been started on this host yet. Run the audit on the main screen first, then reopen this page.",
+          );
+      })
+      .catch((e) => {
+        if (!cancelled) setHandsetError(String(e));
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [handset, handsetRun]);
+
   useEffect(() => {
     if (still) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
@@ -93,6 +132,34 @@ export default function App() {
   }
 
   const redacted = run ? Object.values(run.redactions).reduce((a, b) => a + b, 0) : 0;
+
+  if (handset) {
+    return (
+      <main className="app is-handset">
+        <header className="masthead">
+          <div className="mh-mark">
+            <span className="mh-name">CALIPER</span>
+            <span className="mh-tag">Practice call</span>
+          </div>
+          {handsetRun && <span className="mh-run mono">{handsetRun}</span>}
+        </header>
+        {handsetRun ? (
+          <Practice runId={handsetRun} />
+        ) : (
+          <section className="screen">
+            <p className="lede">
+              {handsetError ?? "Finding the run this host is working on."}
+            </p>
+            {handsetError && (
+              <p className="intake-note mono">
+                <a href="/">Open the main screen</a>
+              </p>
+            )}
+          </section>
+        )}
+      </main>
+    );
+  }
 
   return (
     <main className="app">
