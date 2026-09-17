@@ -46,6 +46,7 @@ export function DesignGraph({ connectivity }: { connectivity: Connectivity }) {
 
   useEffect(() => {
     if (!root.current) return;
+    if (new URLSearchParams(window.location.search).has("still")) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
       // drawSVG is a paid GSAP plugin, so the reveal uses a dash offset that

@@ -25,6 +25,7 @@ export function QuantileDotplot({ reliability }: { reliability: Reliability }) {
 
   useEffect(() => {
     if (!root.current) return;
+    if (new URLSearchParams(window.location.search).has("still")) return;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     const ctx = gsap.context(() => {
       gsap.from(".qd-dot", {

@@ -20,6 +20,7 @@ export function ItemPlot({ items, animate = true }: { items: ItemStat[]; animate
 
   useEffect(() => {
     if (!animate || !root.current) return;
+    if (new URLSearchParams(window.location.search).has("still")) return;
     const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     if (reduce) return;
     const ctx = gsap.context(() => {
