@@ -188,3 +188,6 @@ export const api = {
 };
 
 export const BASE_URL = BASE;
+
+/** The sponsor's six tab design workbook for a run, as a download URL. */
+export const workbookUrl = (runId: string) => `${BASE}/api/runs/${runId}/workbook`;

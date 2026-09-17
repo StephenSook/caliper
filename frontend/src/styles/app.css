@@ -407,3 +407,17 @@
   .ledger-list li { grid-template-columns: 28px 1fr; }
   .lg-at { display: none; }
 }
+
+.workbook-cta {
+  display: block;
+  border: 1px solid var(--signal);
+  background: var(--signal-dim);
+  border-radius: var(--radius);
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  text-decoration: none;
+  transition: transform var(--dur-fast) var(--ease), background var(--dur-fast) var(--ease);
+}
+.workbook-cta:hover { transform: translateY(-2px); background: rgba(74, 222, 154, 0.22); }
+.wc-label { display: block; font-family: var(--font-display); font-size: var(--step-1); color: var(--signal); }
+.wc-detail { display: block; color: var(--paper-400); font-size: var(--step--1); margin-top: 6px; max-width: 70ch; }

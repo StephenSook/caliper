@@ -61,10 +61,12 @@ export function Intervention({
   bundle,
   alignment,
   diagnosisId,
+  workbookHref,
 }: {
   bundle: Bundle;
   alignment: Alignment;
   diagnosisId: string;
+  workbookHref?: string;
 }) {
   const item = bundle.rewritten_item;
   const obj = bundle.objectives[0];
@@ -86,6 +88,16 @@ export function Intervention({
         <span className="eyebrow">screen 05 / intervention</span>
         <h2>The fix, and the chain that proves every piece traces back.</h2>
       </header>
+
+      {workbookHref && (
+        <a className="workbook-cta" href={workbookHref} download>
+          <span className="wc-label">Download the design workbook</span>
+          <span className="wc-detail">
+            All six tabs of the ResultsCX Needs Analysis to Design chain, from this one
+            run. Their process completes these by hand, one prompt per tab.
+          </span>
+        </a>
+      )}
 
       <div className="panel rewrite">
         <span className="eyebrow">the question, rewritten</span>

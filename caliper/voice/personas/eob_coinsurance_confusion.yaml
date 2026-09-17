@@ -1,0 +1,58 @@
+# Member persona for the practice call.
+#
+# The product layer contains NO hardcoded persona. This file is configuration,
+# loaded at runtime, so the shipped interface and the repository never carry a
+# named character and the simulation can be repointed without touching code.
+#
+# The person is synthetic and labelled synthetic on every surface that renders
+# her. The plan MECHANICS are real and public: coinsurance is a percentage of the
+# ALLOWED amount, not the billed amount, and it applies AFTER the deductible is
+# met. A member who just met their deductible still owes coinsurance until they
+# reach the out of pocket maximum. An explanation of benefits is not a bill.
+# Sources: CMS "Reading Your Explanation of Benefits", HealthCare.gov cost pages.
+#
+# Getting this wrong is how we look fake to the healthcare professionals in the
+# room, so the arithmetic below is internally consistent and checked by a test.
+
+scenario_id: eob_coinsurance_confusion
+synthetic: true
+disclosure: "Synthetic member. Real plan mechanics from public CMS and HealthCare.gov sources."
+
+call_driver: Explanation of benefits dispute after the deductible was met
+
+member_state:
+  emotional_register: anxious, braced for bad news, not hostile
+  confidence_vs_comprehension: high confidence, low comprehension
+  core_misunderstanding: believes coinsurance is a flat copay
+  believes: "I met my deductible last month so I should owe nothing"
+  opening_line: "I got a bill for two hundred and eighty five dollars and I already met my deductible."
+
+plan_facts:
+  deductible_met: true
+  coinsurance_rate: 0.20
+  billed_amount: 1700.00
+  allowed_amount: 1425.00
+  network_adjustment: 275.00      # billed minus allowed, not owed in network
+  plan_paid: 1140.00              # 80 percent of the allowed amount
+  member_responsibility: 285.00   # 20 percent of the allowed amount
+  out_of_pocket_remaining: 2150.00
+
+success_criterion:
+  id: CONFIRM_UNDERSTANDING
+  test: >-
+    The member restates, in her own words, the amount she owes AND the reason,
+    and the restatement is substantively correct on the first attempt.
+
+verification_required:
+  - full name
+  - date of birth
+  - member id or address on file
+
+scored_criteria:
+  - id: VERIFY_IDENTITY
+    text: Identity and authority verified before any plan detail was disclosed
+    basis: 45 CFR 164.514(h)
+  - id: ALLOWED_VS_BILLED
+    text: Distinguished what the provider billed from what the plan allows
+  - id: CONFIRM_UNDERSTANDING
+    text: Member restated what she owes, in her own words, correctly
