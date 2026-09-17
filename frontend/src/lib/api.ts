@@ -12,8 +12,20 @@
  * the backend serves this bundle, so /api and /ws are relative and there is no
  * cross origin story to get wrong. A separate value is only for `vite dev`,
  * where the interface and the API run on different ports.
+ *
+ * The default MUST depend on the build mode, and getting this wrong is not a
+ * theoretical risk: it shipped. A production bundle that defaults to
+ * http://127.0.0.1:8000 works perfectly on the developer's laptop and fails on
+ * every other machine in the world, because a page served over HTTPS may not
+ * call a plain HTTP address. The browser blocks it as mixed content, the only
+ * symptom is "TypeError: Failed to fetch", and nothing in the build, the tests
+ * or the server logs says a word about it.
+ *
+ * scripts/check_bundle_origin.py fails the build if a localhost address reaches
+ * the built bundle, because a comment is not an enforcement mechanism.
  */
-const BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+const BASE =
+  import.meta.env.VITE_API_BASE ?? (import.meta.env.DEV ? "http://127.0.0.1:8000" : "");
 
 /** WebSocket origin. A relative BASE has to become an absolute ws or wss URL. */
 export function wsBase(): string {
@@ -187,6 +199,9 @@ export const api = {
   evidence: () => call<Record<string, unknown>>("/api/evidence"),
   createRun: () => call<RunResponse>("/api/runs", { method: "POST", body: "{}" }),
   getRun: (id: string) => call<Record<string, unknown>>(`/api/runs/${id}`),
+  /** The most recent run on this host, or null. Used by the handset to attach
+      to a run the laptop already started, so a phone never has to type an id. */
+  latestRun: () => call<{ latest_run_id: string | null }>("/api/runs"),
   ledger: (id: string) => call<{ transitions: Transition[] }>(`/api/runs/${id}/ledger`),
   decide: (id: string, decision: string, actor: string, note = "") =>
     call<{ state: string; decided_by: string; decided_by_verified: boolean; note: string }>(

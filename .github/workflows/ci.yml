@@ -31,3 +31,32 @@ jobs:
         run: python scripts/check_dashes.py
       - name: No confidential material or supplied identifier
         run: python scripts/check_confidential.py
+
+  # The interface was never built or typechecked in CI, which meant a whole class
+  # of judge facing defect could not be caught here. One of them shipped: the
+  # production bundle defaulted to a localhost API address, so every request from
+  # the deployed HTTPS link was blocked as mixed content while the build, the
+  # tests and the server logs all stayed green.
+  interface:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+      - name: Install
+        run: npm ci
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Build
+        run: npx vite build
+      # Runs after the build on purpose: it reads the built bundle, which is the
+      # only artifact that can carry this defect.
+      - name: No development address in the built bundle
+        working-directory: .
+        run: python3 scripts/check_bundle_origin.py

@@ -62,3 +62,9 @@ test-results/
 /AGENTS.md
 .claude/
 /docs/private/
+
+# Runtime state, not source. .runs/ holds the SQLite run store and the current
+# tunnel address; the egg-info directory is a build artifact of the editable
+# install. Neither belongs in history, and an untracked file is no protection.
+.runs/
+*.egg-info/
