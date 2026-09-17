@@ -1,0 +1,64 @@
+# Private research material never reaches GitHub (standing ~/dev convention).
+# The repo tracks code only. Stage named paths, never git add -A.
+*.pdf
+*.docx
+*.doc
+*.pptx
+*.zip
+/research/
+CALIPER_BUILD_SPEC.md
+/frontend doc
+/AI Competition Case Study*
+/CALIPER_Team_Briefing*
+/ResultsCX*
+
+# Competition-confidential ResultsCX case package.
+# Raw evaluator comments, agent names, member ids, participation ids, call ids
+# NEVER reach a repo, a screenshot, a slide, or a demo. Synthetic data only.
+/case-package/
+/data/raw/
+*.xlsx
+*.xls
+*.csv
+!**/synthetic/*.csv
+!**/fixtures/*.csv
+
+# Env + secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p8
+*.p12
+
+# Deps + build
+node_modules/
+.next/
+dist/
+build/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+cdk.out/
+coverage/
+htmlcov/
+.coverage
+playwright-report/
+test-results/
+
+# OS/IDE
+.DS_Store
+.vscode/
+.idea/
+*.log
+
+# Private working files (strategy + agent instructions stay local)
+/CLAUDE.md
+/AGENTS.md
+.claude/
+/docs/private/
