@@ -4,6 +4,7 @@ import { Audit } from "./screens/Audit";
 import { Diagnosis } from "./screens/Diagnosis";
 import { Gate } from "./screens/Gate";
 import { Intervention } from "./screens/Intervention";
+import { Practice } from "./screens/Practice";
 import { api, workbookUrl, type RunResponse, type Transition } from "./lib/api";
 import "./styles/tokens.css";
 import "./styles/app.css";
@@ -168,6 +169,14 @@ export default function App() {
               alignment={alignment as never}
               diagnosisId={run.diagnosis.diagnosis_id}
               workbookHref={workbookUrl(run.run_id)}
+            />
+          )}
+          {bundle && (
+            <Practice
+              runId={run.run_id}
+              scoredItemId={
+                (bundle.rewritten_item as { item_id?: string } | undefined)?.item_id
+              }
             />
           )}
         </>
