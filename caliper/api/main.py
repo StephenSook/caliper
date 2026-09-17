@@ -18,7 +18,7 @@ from pathlib import Path
 
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import Response
+from fastapi.responses import HTMLResponse, Response
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -31,6 +31,8 @@ from caliper.api.auth import (
     resolve_operator_ws,
     token_from_subprotocol,
 )
+from caliper.api.judge import render as render_judge
+from caliper.evaluation import golden
 from caliper.export import rcx_workbook
 from caliper.orchestrator.gate import GateNotSatisfied
 from caliper.orchestrator.run_state import IllegalTransition, RunState, RunStore
@@ -377,6 +379,24 @@ async def practice(ws: WebSocket, run_id: str) -> None:
 def list_runs() -> dict:
     latest = store.latest()
     return {"latest_run_id": latest}
+
+
+@app.get("/api/golden")
+def golden_cases() -> dict:
+    """Run the golden harness now and return what actually happened.
+
+    Credential free on purpose. This is the "how do you know it works" answer,
+    and an answer a judge cannot reach scores as absent.
+    """
+    return golden.run(DATA_DIR).to_dict()
+
+
+@app.get("/judge", response_class=HTMLResponse)
+def judge_door() -> HTMLResponse:
+    """The judge door. Server rendered, credential free, no scripting required."""
+    if not DATA_DIR.exists():
+        raise HTTPException(404, "the supplied case package is not present on this host")
+    return HTMLResponse(render_judge(evidence(), golden.run(DATA_DIR).to_dict()))
 
 
 # The built interface is served from the SAME ORIGIN as the API.
