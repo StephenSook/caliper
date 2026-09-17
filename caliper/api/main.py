@@ -22,7 +22,13 @@ from fastapi.responses import Response
 from pydantic import BaseModel
 
 from caliper import pipeline
-from caliper.api.auth import allowed_origins, auth_required, resolve_operator
+from caliper.api.auth import (
+    allowed_origins,
+    auth_required,
+    check_websocket_origin,
+    resolve_operator,
+    resolve_operator_ws,
+)
 from caliper.export import rcx_workbook
 from caliper.orchestrator.gate import GateNotSatisfied
 from caliper.orchestrator.run_state import IllegalTransition, RunState, RunStore
@@ -271,6 +277,30 @@ async def practice(ws: WebSocket, run_id: str) -> None:
     discard audio it has already received but not yet played. The interrupted
     event exists for exactly that and is forwarded immediately.
     """
+    # Authenticate and validate the Origin BEFORE accepting.
+    #
+    # A WebSocket is not covered by CORS, so the middleware above never sees this
+    # handshake. Accepting first and checking afterwards would mean an
+    # unauthorised page had already opened a live socket to the model.
+    origin = ws.headers.get("origin")
+    if not check_websocket_origin(origin):
+        await ws.close(code=1008)
+        return
+
+    token = ws.query_params.get("token") or ws.headers.get("sec-websocket-protocol")
+    operator = resolve_operator_ws(token)
+    if operator is None:
+        await ws.close(code=1008)
+        return
+
+    # The run must exist before a socket is opened against it, so an unknown or
+    # guessed id cannot hold a model session open.
+    try:
+        store.state(run_id)
+    except KeyError:
+        await ws.close(code=1008)
+        return
+
     await ws.accept()
     persona = _load_persona()
     if persona is None:
@@ -320,10 +350,13 @@ async def practice(ws: WebSocket, run_id: str) -> None:
                 store.transition(
                     run_id,
                     RunState.PRACTICE_SCORED,
-                    actor="practice call",
+                    actor=operator.name,
                     note="live practice scored on the rewritten item",
                     merge={"practice_score": session.score_state.as_payload()},
-                    actor_verified=True,
+                    # The ledger records whether the caller was PROVEN, exactly as
+                    # the approval gate does. An unauthenticated practice score is
+                    # a claim, not a verified record.
+                    actor_verified=operator.verified,
                 )
         except (KeyError, IllegalTransition):
             pass

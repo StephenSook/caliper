@@ -91,6 +91,47 @@ def resolve_operator(
     )
 
 
+def check_websocket_origin(origin: str | None) -> bool:
+    """Validate the Origin of a WebSocket handshake.
+
+    This is NOT redundant with the CORS middleware. The browser same origin
+    policy does not apply to WebSocket connections at all, so a page on any
+    origin can open a socket to this server and CORS will never see it. For a
+    socket that mutates run state, the Origin check IS the control.
+
+    A missing Origin is allowed only when no operator secret is configured, so a
+    non browser client (the smoke test, a CLI) still works on a laptop and a
+    deployed instance refuses one.
+    """
+    if origin is None:
+        return not auth_required()
+    return origin in allowed_origins()
+
+
+def resolve_operator_ws(token: str | None, claimed_name: str = "practice") -> Operator | None:
+    """Operator identity for a WebSocket, which cannot carry custom headers.
+
+    Browsers cannot set an Authorization header on a WebSocket, so the token
+    arrives as a subprotocol or a query parameter. Returns None when auth is
+    configured and the token does not match, so the caller can close with 1008.
+    """
+    if not auth_required():
+        return Operator(name=claimed_name, verified=False)
+
+    presented = (token or "").strip()
+    if not presented:
+        return None
+
+    for value, name in _roster().items():
+        if hmac.compare_digest(presented, value):
+            return Operator(name=name, verified=True)
+
+    shared = os.environ.get(TOKEN_ENV)
+    if shared and hmac.compare_digest(presented, shared):
+        return Operator(name=claimed_name, verified=True)
+    return None
+
+
 def allowed_origins() -> list[str]:
     """Explicit allowlist. A wildcard origin on an endpoint that records approvals
     lets any page a reviewer happens to have open drive the audit trail."""

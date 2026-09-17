@@ -11,7 +11,13 @@ from __future__ import annotations
 import pytest
 from fastapi import HTTPException
 
-from caliper.api.auth import allowed_origins, auth_required, resolve_operator
+from caliper.api.auth import (
+    allowed_origins,
+    auth_required,
+    check_websocket_origin,
+    resolve_operator,
+    resolve_operator_ws,
+)
 from caliper.orchestrator.gate import open_gate, record_decision
 from caliper.orchestrator.run_state import RunState, RunStore
 
@@ -119,3 +125,47 @@ def test_cors_is_never_a_wildcard():
 def test_cors_allowlist_is_configurable(monkeypatch):
     monkeypatch.setenv("CALIPER_ALLOWED_ORIGINS", "https://caliper.example, https://demo.example")
     assert allowed_origins() == ["https://caliper.example", "https://demo.example"]
+
+
+# --------------------------------------------------------------------------
+# WebSocket handshake. A socket is NOT covered by CORS, so the browser same
+# origin policy never sees it and the Origin check IS the control rather than a
+# second layer of one. This socket also mutates run state, so it cannot be
+# treated like the read only evidence endpoints.
+# --------------------------------------------------------------------------
+
+
+def test_a_disallowed_origin_is_refused_even_with_a_valid_token(monkeypatch):
+    monkeypatch.setenv("CALIPER_OPERATOR_TOKEN", "tok")
+    assert check_websocket_origin("https://evil.example") is False
+    assert check_websocket_origin("http://localhost:5173") is True
+
+
+def test_a_missing_origin_is_allowed_only_when_no_secret_is_configured(monkeypatch):
+    """A non browser client (the smoke test, a CLI) sends no Origin and must work
+    on a laptop. A deployed instance with a secret configured must refuse it."""
+    assert check_websocket_origin(None) is True
+    monkeypatch.setenv("CALIPER_OPERATOR_TOKEN", "tok")
+    assert check_websocket_origin(None) is False
+
+
+def test_the_websocket_token_verifies_an_operator(monkeypatch):
+    monkeypatch.setenv("CALIPER_OPERATOR_TOKEN", "tok")
+    assert resolve_operator_ws("tok").verified is True
+    assert resolve_operator_ws("wrong") is None
+    assert resolve_operator_ws(None) is None
+    assert resolve_operator_ws("") is None
+
+
+def test_a_roster_token_names_the_websocket_operator(monkeypatch):
+    monkeypatch.setenv("CALIPER_OPERATOR_ROSTER", "tk:QA Manager")
+    op = resolve_operator_ws("tk", claimed_name="whoever")
+    assert op is not None and op.verified is True and op.name == "QA Manager"
+
+
+def test_without_a_secret_the_websocket_operator_is_unverified_not_refused(monkeypatch):
+    """Fails open on a laptop so the demo needs no ceremony, but the practice
+    score it writes is recorded as a claim rather than a verified record."""
+    op = resolve_operator_ws(None)
+    assert op is not None
+    assert op.verified is False
