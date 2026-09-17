@@ -14,11 +14,12 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, Header, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 
 from caliper import pipeline
+from caliper.api.auth import allowed_origins, auth_required, resolve_operator
 from caliper.orchestrator.gate import GateNotSatisfied
 from caliper.orchestrator.run_state import IllegalTransition, RunStore
 
@@ -30,12 +31,15 @@ app = FastAPI(
     "any worker from it.",
     version="0.1.0",
 )
+# A wildcard origin on endpoints that record a human approval lets any page a
+# reviewer happens to have open drive the audit trail. The allowlist is explicit
+# and configurable, defaulting to the local development origins.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=allowed_origins(),
     allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST", "OPTIONS"],
+    allow_headers=["Content-Type", "Authorization"],
 )
 
 store = RunStore()
@@ -57,6 +61,8 @@ def health() -> dict:
         "voice_model": os.environ.get("CALIPER_VOICE_MODEL_ID", "amazon.nova-2-sonic-v1:0"),
         "aws_region": os.environ.get("AWS_REGION", "us-east-1"),
         "deterministic_core_requires_aws": False,
+        "operator_auth_enforced": auth_required(),
+        "allowed_origins": allowed_origins(),
     }
 
 
@@ -100,7 +106,8 @@ def evidence() -> dict:
 
 
 @app.post("/api/runs")
-def create_run() -> dict:
+def create_run(authorization: str | None = Header(default=None)) -> dict:
+    resolve_operator("run starter", authorization)
     """Screens one to three in one call: intake, audit, diagnosis, stop at gate."""
     try:
         result = pipeline.start(DATA_DIR, store=store)
@@ -138,20 +145,38 @@ def get_ledger(run_id: str) -> dict:
 
 
 @app.post("/api/runs/{run_id}/decision")
-def decide(run_id: str, body: DecisionBody) -> dict:
+def decide(run_id: str, body: DecisionBody, authorization: str | None = Header(default=None)) -> dict:
+    operator = resolve_operator(body.actor, authorization)
     try:
         result = pipeline.approve(
-            run_id, actor=body.actor, decision=body.decision, note=body.note, store=store
+            run_id,
+            actor=operator.name,
+            decision=body.decision,
+            note=body.note,
+            store=store,
+            actor_verified=operator.verified,
         )
     except KeyError as exc:
         raise HTTPException(404, f"unknown run {run_id}") from exc
     except (ValueError, IllegalTransition, GateNotSatisfied) as exc:
         raise HTTPException(409, str(exc)) from exc
-    return {"run_id": run_id, "state": result.state}
+    return {
+        "run_id": run_id,
+        "state": result.state,
+        "decided_by": operator.name,
+        "decided_by_verified": operator.verified,
+        "note": (
+            "Recorded as a claim. No operator token is configured on this host, so the "
+            "approver's identity was asserted by the caller rather than proven."
+            if not operator.verified
+            else "Identity proven by operator token."
+        ),
+    }
 
 
 @app.post("/api/runs/{run_id}/generate")
-def generate(run_id: str) -> dict:
+def generate(run_id: str, authorization: str | None = Header(default=None)) -> dict:
+    resolve_operator("generator", authorization)
     """Refuses unless a human approval is recorded, and says why."""
     try:
         result = pipeline.generate(run_id, store=store)

@@ -68,6 +68,7 @@ def record_decision(
     actor: str,
     note: str = "",
     edited_diagnosis: dict | None = None,
+    actor_verified: bool = False,
 ) -> RunState:
     if decision not in DECISIONS:
         raise ValueError(f"unknown decision {decision}. Legal: {sorted(DECISIONS)}")
@@ -77,6 +78,11 @@ def record_decision(
     merge = {
         "human_decision": decision,
         "decided_by": actor,
+        # Recorded NEXT TO the name, never instead of it. A product that refuses
+        # to over assert about a workforce has no business over asserting about
+        # its own audit trail, so an approval whose actor could not be proven is
+        # stored as a claim and labelled as one.
+        "decided_by_verified": actor_verified,
         "approved_at": datetime.now(UTC).isoformat(),
     }
     if decision == "APPROVE":
@@ -91,7 +97,14 @@ def record_decision(
     else:
         target = RunState.DIAGNOSED  # more evidence requested, re diagnose
 
-    store.transition(run_id, target, actor=actor, note=f"{decision}: {note}", merge=merge)
+    store.transition(
+        run_id,
+        target,
+        actor=actor,
+        note=f"{decision}: {note}",
+        merge=merge,
+        actor_verified=actor_verified,
+    )
     return target
 
 

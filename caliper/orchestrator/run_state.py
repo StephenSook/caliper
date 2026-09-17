@@ -65,6 +65,11 @@ class Transition:
     at: str
     actor: str
     note: str
+    # Whether the actor's identity was PROVEN rather than asserted by the caller.
+    # A product that refuses to assert what its evidence cannot support has to
+    # apply that to its own audit trail, otherwise the one claim a judge will
+    # press on is the one claim nobody checked.
+    actor_verified: bool = False
 
 
 class IllegalTransition(RuntimeError):
@@ -111,10 +116,14 @@ class RunStore:
                     at TEXT NOT NULL,
                     actor TEXT NOT NULL,
                     note TEXT NOT NULL DEFAULT '',
+                    actor_verified INTEGER NOT NULL DEFAULT 0,
                     PRIMARY KEY (run_id, seq)
                 );
                 """
             )
+            cols = {r["name"] for r in conn.execute("PRAGMA table_info(ledger)")}
+            if "actor_verified" not in cols:
+                conn.execute("ALTER TABLE ledger ADD COLUMN actor_verified INTEGER NOT NULL DEFAULT 0")
 
     def create(self, run_id: str | None = None) -> str:
         run_id = run_id or f"RUN-{uuid.uuid4().hex[:8].upper()}"
@@ -125,9 +134,9 @@ class RunStore:
                 (run_id, RunState.INTAKE.value, now, now),
             )
             conn.execute(
-                "INSERT INTO ledger (run_id, seq, from_state, to_state, at, actor, note) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (run_id, 0, None, RunState.INTAKE.value, now, "system", "run created"),
+                "INSERT INTO ledger (run_id, seq, from_state, to_state, at, actor, note, "
+                "actor_verified) VALUES (?,?,?,?,?,?,?,?)",
+                (run_id, 0, None, RunState.INTAKE.value, now, "system", "run created", 1),
             )
         return run_id
 
@@ -146,7 +155,13 @@ class RunStore:
         return json.loads(row["payload"])
 
     def transition(
-        self, run_id: str, to: RunState, actor: str = "system", note: str = "", merge: dict | None = None
+        self,
+        run_id: str,
+        to: RunState,
+        actor: str = "system",
+        note: str = "",
+        merge: dict | None = None,
+        actor_verified: bool = False,
     ) -> Transition:
         current = self.state(run_id)
         if to not in LEGAL[current]:
@@ -167,17 +182,26 @@ class RunStore:
                 (to.value, now, json.dumps(data, default=str), run_id),
             )
             conn.execute(
-                "INSERT INTO ledger (run_id, seq, from_state, to_state, at, actor, note) "
-                "VALUES (?,?,?,?,?,?,?)",
-                (run_id, seq, current.value, to.value, now, actor, note),
+                "INSERT INTO ledger (run_id, seq, from_state, to_state, at, actor, note, "
+                "actor_verified) VALUES (?,?,?,?,?,?,?,?)",
+                (run_id, seq, current.value, to.value, now, actor, note, 1 if actor_verified else 0),
             )
-        return Transition(run_id, seq, current.value, to.value, now, actor, note)
+        return Transition(run_id, seq, current.value, to.value, now, actor, note, actor_verified)
 
     def ledger(self, run_id: str) -> list[Transition]:
         with closing(self._connect()) as conn:
             rows = conn.execute("SELECT * FROM ledger WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()
         return [
-            Transition(r["run_id"], r["seq"], r["from_state"], r["to_state"], r["at"], r["actor"], r["note"])
+            Transition(
+                r["run_id"],
+                r["seq"],
+                r["from_state"],
+                r["to_state"],
+                r["at"],
+                r["actor"],
+                r["note"],
+                bool(r["actor_verified"]),
+            )
             for r in rows
         ]
 

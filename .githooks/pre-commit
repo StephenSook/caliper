@@ -11,3 +11,4 @@ PY=".venv/bin/python"
 
 "$PY" scripts/check_confidential.py
 "$PY" scripts/check_dashes.py
+"$PY" scripts/check_dead_model.py

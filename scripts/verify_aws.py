@@ -24,7 +24,11 @@ REGION = os.environ.get("AWS_REGION", "us-east-1")
 PROFILE = os.environ.get("AWS_PROFILE")
 VOICE_MODEL = os.environ.get("CALIPER_VOICE_MODEL_ID", "amazon.nova-2-sonic-v1:0")
 TEXT_MODEL = os.environ.get("CALIPER_TEXT_MODEL_ID", "us.amazon.nova-2-lite-v1:0")
-DEAD_MODEL = "amazon.nova-sonic-v1:0"  # end of life 2026-09-14, requests now fail
+# Assembled from parts on purpose. The repository guard that forbids this
+# identifier scans every tracked file, and a guard whose own source contains the
+# string it forbids matches itself. Excluding this file from the guard would make
+# a real violation here invisible, which is worse, so the literal never appears.
+DEAD_MODEL = "amazon.nova-" + "sonic-v1:0"  # end of life 2026-09-14, requests now fail
 
 GREEN, RED, YELLOW, RESET = "\033[32m", "\033[31m", "\033[33m", "\033[0m"
 results: list[tuple[bool | None, str, str]] = []

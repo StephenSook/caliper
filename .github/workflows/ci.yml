@@ -25,13 +25,9 @@ jobs:
         run: ruff format --check .
       - name: Tests
         run: pytest
-      - name: No dead Nova Sonic model identifier
-        run: |
-          if grep -rn --include='*.py' --include='*.ts' --include='*.tsx' --include='*.json' \
-               'amazon\.nova-sonic-v1' . ; then
-            echo "FAIL: the v1 speech model reached end of life on 2026-09-14"
-            exit 1
-          fi
-          echo "clean: no dead model identifier"
+      - name: No end of life Nova Sonic model identifier
+        run: python scripts/check_dead_model.py
       - name: No em dash or en dash in tracked source
         run: python scripts/check_dashes.py
+      - name: No confidential material or supplied identifier
+        run: python scripts/check_confidential.py

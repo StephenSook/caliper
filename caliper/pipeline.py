@@ -69,10 +69,15 @@ def start(
 
 
 def approve(
-    run_id: str, actor: str, decision: str = "APPROVE", note: str = "", store: RunStore | None = None
+    run_id: str,
+    actor: str,
+    decision: str = "APPROVE",
+    note: str = "",
+    store: RunStore | None = None,
+    actor_verified: bool = False,
 ) -> RunResult:
     store = store or RunStore()
-    record_decision(store, run_id, decision, actor=actor, note=note)
+    record_decision(store, run_id, decision, actor=actor, note=note, actor_verified=actor_verified)
     payload = store.payload(run_id)
     return RunResult(
         run_id=run_id,
