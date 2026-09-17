@@ -12,8 +12,8 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from caliper.diagnose.engine import diagnose
-from caliper.ingest.normalize import load_all
-from caliper.instrument.audit import audit_all
+from caliper.ingest.normalize import load_all  # noqa: F401  re exported for the api
+from caliper.instrument.audit import audit_all  # noqa: F401  re exported for the api
 from caliper.instrument.power import improvement_claim_licensed, n_per_arm, rtm_risk
 from caliper.intervene.align import validate
 from caliper.intervene.item_rewrite import rewrite
