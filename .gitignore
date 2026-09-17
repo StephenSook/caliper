@@ -68,3 +68,13 @@ test-results/
 # install. Neither belongs in history, and an untracked file is no protection.
 .runs/
 *.egg-info/
+
+# Signing material. The real keystore lives outside this tree entirely; these
+# patterns exist so a stray copy inside it can never be staged. An Android
+# signing key cannot be rotated after release, so a leak is permanent.
+*.jks
+*.keystore
+keystore.properties
+*.p8
+*.p12
+*.mobileprovision

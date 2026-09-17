@@ -16,10 +16,36 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    // Release signing.
+    //
+    // The keystore and its password live OUTSIDE this repository and are read
+    // from the environment. A signing key inside a working tree is one wide
+    // `git add` away from being public forever, and an Android signing key
+    // cannot be rotated after a release: the key IS the app's identity, so a
+    // leak means the app can never be updated again under that identity.
+    //
+    // When the variables are absent the release config is simply not created,
+    // and `assembleRelease` then produces an unsigned artifact rather than
+    // silently falling back to the debug key. A build that quietly signs with a
+    // debug key produces something that looks shippable and is not.
+    signingConfigs {
+        if (System.getenv("CALIPER_KEYSTORE") && System.getenv("CALIPER_KEYSTORE_PASSWORD")) {
+            release {
+                storeFile file(System.getenv("CALIPER_KEYSTORE"))
+                storePassword System.getenv("CALIPER_KEYSTORE_PASSWORD")
+                keyAlias System.getenv("CALIPER_KEY_ALIAS") ?: "caliper"
+                keyPassword System.getenv("CALIPER_KEY_PASSWORD") ?: System.getenv("CALIPER_KEYSTORE_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            if (signingConfigs.findByName("release") != null) {
+                signingConfig signingConfigs.release
+            }
         }
     }
 }
