@@ -174,8 +174,22 @@ def allowed_origins() -> list[str]:
     if raw.strip():
         return [o.strip() for o in raw.split(",") if o.strip()]
     return [
+        # The Vite dev server and its preview mode.
         "http://localhost:5173",
         "http://127.0.0.1:5173",
         "http://localhost:4173",
         "http://127.0.0.1:4173",
+        # The native shell. A Capacitor WebView serves the bundled launcher from
+        # a fixed local origin: https://localhost on Android when androidScheme
+        # is https, and capacitor://localhost on iOS. The launcher makes exactly
+        # one cross origin request, an unauthenticated /api/health probe, to
+        # check the backend answers before it navigates; once it navigates, the
+        # WebView is on the backend's own origin and nothing here applies.
+        #
+        # Omitting these is not a visible failure. The probe returns the generic
+        # "Failed to fetch", the app looks like it has no network, and the cause
+        # is invisible from the phone. Found by attaching the DevTools protocol
+        # to the running WebView on a device.
+        "https://localhost",
+        "capacitor://localhost",
     ]

@@ -196,3 +196,25 @@ def test_a_missing_file_keeps_its_404(tmp_path: Path, path: str) -> None:
     c = _fallback_client(tmp_path)
     r = c.get(path)
     assert r.status_code == 404, f"{path} was rescued into the shell"
+
+
+def test_the_native_shell_origins_are_allowed() -> None:
+    """The launcher probes the backend before it navigates, cross origin.
+
+    Without these two entries the probe returns the generic "Failed to fetch",
+    the app looks like it has no network, and nothing on the phone or in the
+    server log says which of a dozen causes it was. The same list gates the
+    practice WebSocket, where the Origin check is the only control there is.
+    """
+    from caliper.api.auth import allowed_origins, check_websocket_origin
+
+    origins = allowed_origins()
+    assert "https://localhost" in origins, "the Android WebView origin"
+    assert "capacitor://localhost" in origins, "the iOS WebView origin"
+
+    # The socket gate reads the same list, so the app can take a call too.
+    assert check_websocket_origin("https://localhost", host="example.invalid")
+    assert check_websocket_origin("capacitor://localhost", host="example.invalid")
+
+    # And it still refuses an origin nobody put on the list.
+    assert not check_websocket_origin("https://evil.example", host="example.invalid")

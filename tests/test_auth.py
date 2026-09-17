@@ -117,10 +117,36 @@ def test_verification_is_never_stored_instead_of_the_name(store):
 
 def test_cors_is_never_a_wildcard():
     """A wildcard origin on an endpoint that records approvals lets any page a
-    reviewer has open drive the audit trail."""
+    reviewer has open drive the audit trail.
+
+    This asserted `startswith("http")`, which was a PROXY for the real rule and
+    not the rule itself. It failed the moment a legitimate entry appeared with a
+    different scheme: capacitor://localhost, the origin the iOS WebView serves
+    the native launcher from. The invariant is that every entry is a complete,
+    concrete origin, which is what makes the allowlist an allowlist.
+    """
     origins = allowed_origins()
-    assert "*" not in origins
-    assert all(o.startswith("http") for o in origins)
+    assert origins, "an empty allowlist would refuse the interface itself"
+
+    for origin in origins:
+        assert "*" not in origin, f"{origin} is a pattern, not an origin"
+
+        scheme, sep, rest = origin.partition("://")
+        assert sep, f"{origin} has no scheme, so it can never match an Origin header"
+        assert scheme in {"http", "https", "capacitor"}, f"{origin} has an unexpected scheme"
+        assert rest, f"{origin} has a scheme and no host"
+
+        # A browser Origin header is scheme, host and port only. An entry with a
+        # path can never match one, so it is dead configuration that reads as
+        # protection.
+        assert "/" not in rest, f"{origin} carries a path and can never match an Origin"
+
+    # A plain http origin is only ever a local development address. Allowing a
+    # remote one would let a network attacker's page drive the audit trail.
+    for origin in origins:
+        if origin.startswith("http://"):
+            host = origin.split("://", 1)[1].split(":", 1)[0]
+            assert host in {"localhost", "127.0.0.1"}, f"{origin} is insecure and not local"
 
 
 def test_cors_allowlist_is_configurable(monkeypatch):
