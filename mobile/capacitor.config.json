@@ -1,0 +1,18 @@
+{
+  "appId": "com.sookra.caliper",
+  "appName": "CALIPER",
+  "webDir": "shell",
+  "android": {
+    "allowMixedContent": false
+  },
+  "server": {
+    "androidScheme": "https",
+    "allowNavigation": [
+      "*.trycloudflare.com",
+      "*.onrender.com",
+      "*.railway.app",
+      "*.fly.dev"
+    ]
+  },
+  "plugins": {}
+}

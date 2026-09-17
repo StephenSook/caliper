@@ -1,0 +1,17 @@
+{
+  "name": "caliper-mobile",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Native shell for CALIPER. Hosts the practice call on a phone.",
+  "scripts": {
+    "sync": "cap sync",
+    "android": "cap open android",
+    "ios": "cap open ios"
+  },
+  "dependencies": {
+    "@capacitor/android": "^8.5.2",
+    "@capacitor/cli": "^8.5.2",
+    "@capacitor/core": "^8.5.2",
+    "@capacitor/ios": "^8.5.2"
+  }
+}

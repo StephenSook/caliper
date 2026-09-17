@@ -1,0 +1,161 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+    <meta name="color-scheme" content="dark" />
+    <title>CALIPER</title>
+    <style>
+      :root {
+        --ink-900: #0a0b0d;
+        --ink-700: #1e222a;
+        --paper-100: #f7f7f5;
+        --paper-500: #7c7f87;
+        --signal: #4ade9a;
+        --alert: #ff6b5e;
+        --ease: cubic-bezier(0.16, 1, 0.1, 1);
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        background: var(--ink-900);
+        color: var(--paper-100);
+        font: 15px/1.5 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        min-height: 100dvh;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        padding: max(24px, env(safe-area-inset-top)) 24px
+                 max(24px, calc(env(safe-area-inset-bottom) + 12px));
+      }
+      h1 { font-size: 1.5rem; letter-spacing: 0.02em; margin: 0 0 4px; }
+      .tag { color: var(--paper-500); font-size: 0.85rem; margin: 0 0 28px; }
+      label { display: block; font-size: 0.75rem; letter-spacing: 0.08em;
+              text-transform: uppercase; color: var(--paper-500); margin-bottom: 8px; }
+      input {
+        width: 100%; padding: 14px; border-radius: 10px;
+        border: 1px solid var(--ink-700); background: #101216;
+        color: var(--paper-100); font: 13px ui-monospace, Menlo, monospace;
+      }
+      input:focus { outline: none; border-color: var(--signal); }
+      button {
+        width: 100%; margin-top: 14px; padding: 16px; border: 0; border-radius: 10px;
+        background: var(--signal); color: var(--ink-900);
+        font-size: 1rem; font-weight: 600;
+        transition: opacity 0.4s var(--ease);
+      }
+      button:disabled { opacity: 0.45; }
+      .status { margin-top: 18px; font-size: 0.85rem; min-height: 3em; color: var(--paper-500); }
+      .status.bad { color: var(--alert); }
+      .status.good { color: var(--signal); }
+      .note { margin-top: 28px; font-size: 0.72rem; color: var(--paper-500); line-height: 1.6; }
+    </style>
+  </head>
+  <body>
+    <h1>CALIPER</h1>
+    <p class="tag">Practice call handset</p>
+
+    <label for="host">Backend address</label>
+    <input
+      id="host"
+      type="url"
+      inputmode="url"
+      autocapitalize="off"
+      autocorrect="off"
+      spellcheck="false"
+      placeholder="https://something.trycloudflare.com"
+    />
+    <button id="go">Connect</button>
+    <p class="status" id="status"></p>
+
+    <p class="note">
+      This shell holds no product logic and no data. It reaches the same origin
+      the laptop and the judges' phones reach, so there is one backend, one
+      version and one audit trail. The address is stored on this device and can
+      be changed at any time, which is what keeps the app working when the
+      tunnel is restarted.
+    </p>
+
+    <script>
+      /*
+        The launcher.
+
+        A native shell that hardcodes its backend URL at build time is a time
+        bomb: a development tunnel gets a new hostname every restart, and the
+        binary on the phone cannot be rebuilt at a judging table. So the address
+        lives in device storage, is editable in ten seconds, and is verified
+        before we navigate anywhere.
+
+        Verification is a real request to a real endpoint, not a guess from the
+        shape of the string. An address that parses and does not answer is the
+        failure that matters, and it is the one a judge would see.
+      */
+      var KEY = "caliper.backend";
+      var input = document.getElementById("host");
+      var button = document.getElementById("go");
+      var status = document.getElementById("status");
+
+      function say(message, kind) {
+        status.textContent = message;
+        status.className = "status" + (kind ? " " + kind : "");
+      }
+
+      function normalise(raw) {
+        var value = (raw || "").trim().replace(/\/+$/, "");
+        if (!value) return null;
+        if (!/^https?:\/\//i.test(value)) value = "https://" + value;
+        try {
+          var url = new URL(value);
+          // A microphone is only available in a secure context. A plain http
+          // address would load, show the call screen, and then silently fail to
+          // capture anything, which is the worst of the available failures.
+          if (url.protocol !== "https:") return null;
+          return url.origin;
+        } catch (e) {
+          return null;
+        }
+      }
+
+      input.value = localStorage.getItem(KEY) || "";
+
+      button.addEventListener("click", async function () {
+        var origin = normalise(input.value);
+        if (!origin) {
+          say("That is not an https address. The microphone needs a secure context.", "bad");
+          return;
+        }
+
+        button.disabled = true;
+        say("Checking " + origin);
+
+        try {
+          // /api/health is unauthenticated and returns no case data, so this
+          // probe is safe to make before anyone has approved anything.
+          var response = await fetch(origin + "/api/health", { cache: "no-store" });
+          if (!response.ok) throw new Error("the host answered " + response.status);
+          await response.json();
+        } catch (error) {
+          button.disabled = false;
+          say(
+            "Could not reach that address: " + error.message +
+              ". Check the tunnel is running and the phone has a network.",
+            "bad"
+          );
+          return;
+        }
+
+        localStorage.setItem(KEY, origin);
+        say("Connected. Opening the practice call.", "good");
+        location.replace(origin + "/practice?source=native");
+      });
+
+      // A returning user who already connected once goes straight through, so
+      // the shell is invisible after the first launch.
+      var saved = localStorage.getItem(KEY);
+      if (saved) {
+        say("Reconnecting to " + saved);
+        button.click();
+      }
+    </script>
+  </body>
+</html>

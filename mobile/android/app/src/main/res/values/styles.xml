@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Base application theme. -->
+    <style name="AppTheme" parent="Theme.AppCompat.Light.DarkActionBar">
+        <!-- Customize your theme here. -->
+        <item name="colorPrimary">@color/colorPrimary</item>
+        <item name="colorPrimaryDark">@color/colorPrimaryDark</item>
+        <item name="colorAccent">@color/colorAccent</item>
+    </style>
+
+    <style name="AppTheme.NoActionBar" parent="Theme.AppCompat.DayNight.NoActionBar">
+        <item name="windowActionBar">false</item>
+        <item name="windowNoTitle">true</item>
+        <item name="android:background">@null</item>
+        <!--
+          The app is dark on every screen. Without these the system draws a light
+          status bar with dark icons above it, which reads as a rendering fault
+          rather than a design choice, and it is only visible on a device.
+        -->
+        <item name="android:statusBarColor">@color/statusBar</item>
+        <item name="android:navigationBarColor">@color/statusBar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowBackground">@color/statusBar</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+
+
+    <style name="AppTheme.NoActionBarLaunch" parent="Theme.SplashScreen">
+        <item name="android:background">@drawable/splash</item>
+        <!-- The activity declares this theme in the manifest, so the system bar
+             treatment has to be here too or it applies to nothing. -->
+        <item name="android:statusBarColor">@color/statusBar</item>
+        <item name="android:navigationBarColor">@color/statusBar</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+        <item name="android:windowBackground">@color/statusBar</item>
+    </style>
+</resources>

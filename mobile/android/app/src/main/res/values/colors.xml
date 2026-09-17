@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- The system bar ground. Matches the ink-900 token in the web design
+         system, which is the only colour the native shell and the product have
+         to agree on. -->
+    <color name="statusBar">#0A0B0D</color>
+</resources>

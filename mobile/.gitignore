@@ -1,0 +1,16 @@
+# Dependencies and build output. The native projects themselves ARE tracked,
+# because they carry hand written configuration (the microphone permissions, the
+# system bar treatment) that `cap add` does not regenerate.
+node_modules/
+android/app/build/
+android/build/
+android/.gradle/
+android/local.properties
+android/app/src/main/assets/public/
+android/app/src/main/assets/capacitor.config.json
+ios/App/build/
+ios/App/Pods/
+ios/App/App/public/
+ios/App/App/capacitor.config.json
+DerivedData/
+*.xcuserstate
