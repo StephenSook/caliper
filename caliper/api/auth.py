@@ -119,6 +119,30 @@ def check_websocket_origin(origin: str | None, host: str | None = None) -> bool:
     return origin in allowed_origins()
 
 
+WS_TOKEN_PREFIX = "bearer."
+
+
+def token_from_subprotocol(header: str | None) -> tuple[str | None, str | None]:
+    """Pull the operator token out of the Sec-WebSocket-Protocol header.
+
+    A browser cannot set an Authorization header on a WebSocket, and putting the
+    token in the QUERY STRING is worse than it looks: the URL is written to the
+    server access log, to every proxy in front of it (a tunnel included) and to
+    browser history, so a short lived secret becomes a durable one. The
+    subprotocol travels in a header instead and is logged nowhere by default.
+
+    Returns (token, protocol_to_echo). The browser aborts the connection unless
+    the server echoes one of the offered subprotocols back.
+    """
+    if not header:
+        return None, None
+    for raw in header.split(","):
+        offered = raw.strip()
+        if offered.startswith(WS_TOKEN_PREFIX):
+            return offered[len(WS_TOKEN_PREFIX) :], offered
+    return None, None
+
+
 def resolve_operator_ws(token: str | None, claimed_name: str = "practice") -> Operator | None:
     """Operator identity for a WebSocket, which cannot carry custom headers.
 

@@ -17,6 +17,7 @@ from caliper.api.auth import (
     check_websocket_origin,
     resolve_operator,
     resolve_operator_ws,
+    token_from_subprotocol,
 )
 from caliper.orchestrator.gate import open_gate, record_decision
 from caliper.orchestrator.run_state import RunState, RunStore
@@ -182,3 +183,26 @@ def test_same_origin_is_always_allowed_because_the_hostname_is_not_knowable(monk
     assert check_websocket_origin(f"https://{tunnel}", host=tunnel) is True
     assert check_websocket_origin("https://evil.example", host=tunnel) is False
     assert check_websocket_origin(f"https://{tunnel}", host="other.host") is False
+
+
+def test_the_token_is_read_from_the_subprotocol_not_the_url():
+    """A token in the query string is written to the access log, to every proxy
+    in front of the server (a tunnel included) and to browser history, which
+    turns a short lived secret into a durable one sitting in three logs."""
+    token, echo = token_from_subprotocol("bearer.s3cret")
+    assert token == "s3cret"
+    assert echo == "bearer.s3cret", "the server must echo an offered subprotocol back"
+
+
+def test_the_subprotocol_parser_handles_a_list_and_ignores_others():
+    token, echo = token_from_subprotocol("graphql-ws, bearer.abc123 , json")
+    assert token == "abc123" and echo == "bearer.abc123"
+    assert token_from_subprotocol("graphql-ws, json") == (None, None)
+    assert token_from_subprotocol(None) == (None, None)
+    assert token_from_subprotocol("") == (None, None)
+
+
+def test_a_bare_token_without_the_prefix_is_not_accepted():
+    """Only the prefixed form is a credential, so an unrelated subprotocol cannot
+    be mistaken for one."""
+    assert token_from_subprotocol("s3cret") == (None, None)

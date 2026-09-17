@@ -29,6 +29,7 @@ from caliper.api.auth import (
     check_websocket_origin,
     resolve_operator,
     resolve_operator_ws,
+    token_from_subprotocol,
 )
 from caliper.export import rcx_workbook
 from caliper.orchestrator.gate import GateNotSatisfied
@@ -288,7 +289,10 @@ async def practice(ws: WebSocket, run_id: str) -> None:
         await ws.close(code=1008)
         return
 
-    token = ws.query_params.get("token") or ws.headers.get("sec-websocket-protocol")
+    # The token arrives in the subprotocol, never the query string. A URL is
+    # written to the access log, to every proxy in front of this server and to
+    # browser history, which turns a short lived secret into a durable one.
+    token, echo_protocol = token_from_subprotocol(ws.headers.get("sec-websocket-protocol"))
     operator = resolve_operator_ws(token)
     if operator is None:
         await ws.close(code=1008)
@@ -302,7 +306,9 @@ async def practice(ws: WebSocket, run_id: str) -> None:
         await ws.close(code=1008)
         return
 
-    await ws.accept()
+    # The browser aborts unless the server echoes back one of the offered
+    # subprotocols.
+    await ws.accept(subprotocol=echo_protocol) if echo_protocol else await ws.accept()
     persona = _load_persona()
     if persona is None:
         await ws.send_json({"type": "error", "detail": "no persona configuration is installed"})

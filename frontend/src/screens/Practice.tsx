@@ -72,12 +72,15 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
     setElapsed(0);
     try {
       const token = localStorage.getItem("caliper_operator_token");
-      const url =
-        wsBase() +
-        `/ws/practice/${runId}` +
-        (token ? `?token=${encodeURIComponent(token)}` : "");
+      const url = wsBase() + `/ws/practice/${runId}`;
 
-      const socket = new WebSocket(url);
+      // The token travels as a SUBPROTOCOL, not in the query string. A URL is
+      // written to the server access log, to every proxy in front of it (the
+      // tunnel included) and to browser history, so a token in the query string
+      // turns a short lived secret into a durable one sitting in three logs.
+      const socket = token
+        ? new WebSocket(url, [`bearer.${token}`])
+        : new WebSocket(url);
       socket.binaryType = "arraybuffer";
       ws.current = socket;
       player.current = new AudioPlayer();
