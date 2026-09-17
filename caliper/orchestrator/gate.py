@@ -11,7 +11,7 @@ APPROVE, EDIT, REJECT, REQUEST_MORE_EVIDENCE.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from .run_state import DECISIONS, RunState, RunStore
 
@@ -39,7 +39,9 @@ class GatePrompt:
 def open_gate(store: RunStore, run_id: str, diagnosis: dict) -> GatePrompt:
     """Pause the run and surface everything the human needs on one screen."""
     store.transition(
-        run_id, RunState.AWAITING_APPROVAL, actor="system",
+        run_id,
+        RunState.AWAITING_APPROVAL,
+        actor="system",
         note=f"awaiting human decision on {diagnosis['diagnosis_id']}",
         merge={"diagnosis": diagnosis},
     )
@@ -59,19 +61,23 @@ def open_gate(store: RunStore, run_id: str, diagnosis: dict) -> GatePrompt:
     )
 
 
-def record_decision(store: RunStore, run_id: str, decision: str, actor: str,
-                    note: str = "", edited_diagnosis: dict | None = None) -> RunState:
+def record_decision(
+    store: RunStore,
+    run_id: str,
+    decision: str,
+    actor: str,
+    note: str = "",
+    edited_diagnosis: dict | None = None,
+) -> RunState:
     if decision not in DECISIONS:
         raise ValueError(f"unknown decision {decision}. Legal: {sorted(DECISIONS)}")
     if store.state(run_id) is not RunState.AWAITING_APPROVAL:
-        raise GateNotSatisfied(
-            f"run {run_id} is {store.state(run_id).value}, not awaiting approval"
-        )
+        raise GateNotSatisfied(f"run {run_id} is {store.state(run_id).value}, not awaiting approval")
 
     merge = {
         "human_decision": decision,
         "decided_by": actor,
-        "approved_at": datetime.now(timezone.utc).isoformat(),
+        "approved_at": datetime.now(UTC).isoformat(),
     }
     if decision == "APPROVE":
         target = RunState.APPROVED
@@ -92,8 +98,12 @@ def record_decision(store: RunStore, run_id: str, decision: str, actor: str,
 def require_approved(store: RunStore, run_id: str) -> dict:
     """Called by generation. Refuses rather than proceeding unapproved."""
     state = store.state(run_id)
-    if state not in {RunState.APPROVED, RunState.INTERVENTION_GENERATED,
-                     RunState.PRACTICE_SCORED, RunState.COMPLETE}:
+    if state not in {
+        RunState.APPROVED,
+        RunState.INTERVENTION_GENERATED,
+        RunState.PRACTICE_SCORED,
+        RunState.COMPLETE,
+    }:
         raise GateNotSatisfied(
             f"generation refused: run {run_id} is {state.value}. A human must approve the "
             "diagnosis before any training content is produced, because polished content built "

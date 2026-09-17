@@ -20,14 +20,14 @@ import sqlite3
 import uuid
 from contextlib import closing
 from dataclasses import dataclass
-from datetime import datetime, timezone
-from enum import Enum
+from datetime import UTC, datetime
+from enum import StrEnum
 from pathlib import Path
 
 DB_PATH = Path(".runs/caliper.db")
 
 
-class RunState(str, Enum):
+class RunState(StrEnum):
     INTAKE = "INTAKE"
     INSTRUMENT_AUDITED = "INSTRUMENT_AUDITED"
     DIAGNOSED = "DIAGNOSED"
@@ -72,7 +72,7 @@ class IllegalTransition(RuntimeError):
 
 
 def _now() -> str:
-    return datetime.now(timezone.utc).isoformat()
+    return datetime.now(UTC).isoformat()
 
 
 class RunStore:
@@ -145,8 +145,9 @@ class RunStore:
             raise KeyError(f"unknown run {run_id}")
         return json.loads(row["payload"])
 
-    def transition(self, run_id: str, to: RunState, actor: str = "system",
-                   note: str = "", merge: dict | None = None) -> Transition:
+    def transition(
+        self, run_id: str, to: RunState, actor: str = "system", note: str = "", merge: dict | None = None
+    ) -> Transition:
         current = self.state(run_id)
         if to not in LEGAL[current]:
             raise IllegalTransition(
@@ -174,18 +175,13 @@ class RunStore:
 
     def ledger(self, run_id: str) -> list[Transition]:
         with closing(self._connect()) as conn:
-            rows = conn.execute(
-                "SELECT * FROM ledger WHERE run_id=? ORDER BY seq", (run_id,)
-            ).fetchall()
+            rows = conn.execute("SELECT * FROM ledger WHERE run_id=? ORDER BY seq", (run_id,)).fetchall()
         return [
-            Transition(r["run_id"], r["seq"], r["from_state"], r["to_state"],
-                       r["at"], r["actor"], r["note"])
+            Transition(r["run_id"], r["seq"], r["from_state"], r["to_state"], r["at"], r["actor"], r["note"])
             for r in rows
         ]
 
     def latest(self) -> str | None:
         with closing(self._connect()) as conn:
-            row = conn.execute(
-                "SELECT run_id FROM runs ORDER BY updated_at DESC LIMIT 1"
-            ).fetchone()
+            row = conn.execute("SELECT run_id FROM runs ORDER BY updated_at DESC LIMIT 1").fetchone()
         return row["run_id"] if row else None

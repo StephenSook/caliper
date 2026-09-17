@@ -36,7 +36,9 @@ def n_per_arm(p_baseline: float, p_target: float, power: float = 0.80, alpha: fl
     if p_baseline == p_target:
         raise ValueError("baseline and target rates are identical; no effect to detect")
     h = abs(sm.stats.proportion_effectsize(p_baseline, p_target))
-    n = NormalIndPower().solve_power(effect_size=h, power=power, alpha=alpha, ratio=1.0, alternative="two-sided")
+    n = NormalIndPower().solve_power(
+        effect_size=h, power=power, alpha=alpha, ratio=1.0, alternative="two-sided"
+    )
     return PowerResult(
         baseline_rate=p_baseline,
         target_rate=p_target,

@@ -48,8 +48,23 @@ FORBIDDEN_CONTENT = [
     (re.compile(r"\b\d{3}-\d{2}-\d{4}\b"), "social security number"),
 ]
 
-TEXT_SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".json", ".md", ".txt",
-                 ".yml", ".yaml", ".toml", ".csv", ".html", ".css", ".sh"}
+TEXT_SUFFIXES = {
+    ".py",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".json",
+    ".md",
+    ".txt",
+    ".yml",
+    ".yaml",
+    ".toml",
+    ".csv",
+    ".html",
+    ".css",
+    ".sh",
+}
 
 # This file names the patterns it forbids, so it must exclude itself by git
 # pathspec rather than by a string filter whose anchors could behave differently.
@@ -58,9 +73,20 @@ SELF = "scripts/check_confidential.py"
 
 def staged_or_tracked() -> list[Path]:
     out = subprocess.run(
-        ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard",
-         "--", ".", f":(exclude){SELF}"],
-        capture_output=True, text=True, check=True,
+        [
+            "git",
+            "ls-files",
+            "-z",
+            "--cached",
+            "--others",
+            "--exclude-standard",
+            "--",
+            ".",
+            f":(exclude){SELF}",
+        ],
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return [Path(p) for p in out.split("\0") if p]
 

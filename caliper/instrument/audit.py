@@ -7,8 +7,8 @@ command that regenerates it.
 
 from __future__ import annotations
 
+from collections.abc import Iterable
 from dataclasses import asdict
-from typing import Iterable
 
 import numpy as np
 
@@ -85,9 +85,7 @@ def audit_domain(observations, domain: str) -> dict:
     items = item_analysis(matrix, item_ids, item_texts)
     items_dict = [asdict(i) for i in items]
 
-    outside_band = sum(
-        1 for i in items if i.difficulty_p < 0.25 or i.difficulty_p > 0.85
-    )
+    outside_band = sum(1 for i in items if i.difficulty_p < 0.25 or i.difficulty_p > 0.85)
     zero_variance = sum(1 for i in items if "ZERO_VARIANCE" in i.flags)
     negative_disc = sum(1 for i in items if "NEGATIVE_DISCRIMINATION" in i.flags)
 

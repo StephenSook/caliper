@@ -16,8 +16,8 @@ Two rules govern this file:
 from __future__ import annotations
 
 import numpy as np
-import pingouin as pg
 import pandas as pd
+import pingouin as pg
 import pytest
 
 from caliper.instrument.ctt import (
@@ -74,15 +74,9 @@ def test_kr20_variance_convention_is_consistent():
     matrix = FIXTURE
     n, k = matrix.shape
 
-    population = (k / (k - 1)) * (
-        1 - matrix.var(axis=0, ddof=0).sum() / matrix.sum(axis=1).var(ddof=0)
-    )
-    sample = (k / (k - 1)) * (
-        1 - matrix.var(axis=0, ddof=1).sum() / matrix.sum(axis=1).var(ddof=1)
-    )
-    mixed = (k / (k - 1)) * (
-        1 - matrix.var(axis=0, ddof=0).sum() / matrix.sum(axis=1).var(ddof=1)
-    )
+    population = (k / (k - 1)) * (1 - matrix.var(axis=0, ddof=0).sum() / matrix.sum(axis=1).var(ddof=0))
+    sample = (k / (k - 1)) * (1 - matrix.var(axis=0, ddof=1).sum() / matrix.sum(axis=1).var(ddof=1))
+    mixed = (k / (k - 1)) * (1 - matrix.var(axis=0, ddof=0).sum() / matrix.sum(axis=1).var(ddof=1))
 
     assert population == pytest.approx(sample, abs=1e-12), "consistent conventions must agree"
     assert kr20(matrix) == pytest.approx(sample, abs=1e-12)
@@ -105,8 +99,8 @@ def test_feldt_ci_brackets_the_point_estimate():
 
 def test_feldt_degrees_of_freedom():
     report = reliability_report(FIXTURE)
-    assert report.df1 == 5          # n - 1
-    assert report.df2 == 15         # (n - 1)(k - 1)
+    assert report.df1 == 5  # n - 1
+    assert report.df2 == 15  # (n - 1)(k - 1)
 
 
 def test_item_analysis_flags_zero_variance_and_band():
@@ -141,11 +135,11 @@ def test_item_analysis_corrected_not_uncorrected():
 
 def test_kr20_rejects_degenerate_input():
     with pytest.raises(ValueError):
-        kr20(np.array([[1.0, 0.0]]))                    # one evaluation
+        kr20(np.array([[1.0, 0.0]]))  # one evaluation
     with pytest.raises(ValueError):
-        kr20(np.array([[1.0], [0.0]]))                  # one item
+        kr20(np.array([[1.0], [0.0]]))  # one item
     with pytest.raises(ValueError):
-        kr20(np.ones((4, 3)))                           # zero total variance
+        kr20(np.ones((4, 3)))  # zero total variance
 
 
 def test_phi_reports_cells_and_handles_saturation():

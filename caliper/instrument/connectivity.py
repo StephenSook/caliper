@@ -120,9 +120,7 @@ def connectivity_report(observations) -> ConnectivityReport:
         minimum_removal_set=removal,
         calls_double_scored=double_scored,
         n_calls=len(raters_per_call),
-        link_type=(
-            "SUBJECT_LEVEL_ACROSS_OCCASIONS" if double_scored == 0 else "CALL_LEVEL_DOUBLE_SCORED"
-        ),
+        link_type=("SUBJECT_LEVEL_ACROSS_OCCASIONS" if double_scored == 0 else "CALL_LEVEL_DOUBLE_SCORED"),
         verdict=verdict,
         rater_caseloads=caseloads,
         remedy={

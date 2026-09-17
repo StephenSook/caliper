@@ -7,8 +7,9 @@ correctly. A connectivity check that cannot report a disconnection is decorative
 
 from __future__ import annotations
 
-from caliper.instrument.connectivity import connectivity_report, linkage_fragility
 from conftest import make_obs
+
+from caliper.instrument.connectivity import connectivity_report, linkage_fragility
 
 
 def test_E11_disconnected_design_is_detected():

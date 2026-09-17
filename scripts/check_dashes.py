@@ -23,15 +23,29 @@ EN_DASH = chr(0x2013)
 FORBIDDEN = {EM_DASH: "em dash", EN_DASH: "en dash"}
 
 SCAN_SUFFIXES = {
-    ".py", ".ts", ".tsx", ".js", ".jsx", ".css", ".html", ".md", ".json",
-    ".yml", ".yaml", ".toml", ".txt", ".sh",
+    ".py",
+    ".ts",
+    ".tsx",
+    ".js",
+    ".jsx",
+    ".css",
+    ".html",
+    ".md",
+    ".json",
+    ".yml",
+    ".yaml",
+    ".toml",
+    ".txt",
+    ".sh",
 }
 
 
 def tracked_and_new() -> list[Path]:
     out = subprocess.run(
         ["git", "ls-files", "-z", "--cached", "--others", "--exclude-standard"],
-        capture_output=True, text=True, check=True,
+        capture_output=True,
+        text=True,
+        check=True,
     ).stdout
     return [Path(p) for p in out.split("\0") if p]
 

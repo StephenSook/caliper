@@ -16,10 +16,10 @@ workforce is not a weak intervention, it is the wrong object entirely.
 from __future__ import annotations
 
 from dataclasses import dataclass
-from enum import Enum
+from enum import StrEnum
 
 
-class RootCause(str, Enum):
+class RootCause(StrEnum):
     KNOWLEDGE = "KNOWLEDGE"
     SKILL = "SKILL"
     WILL = "WILL"

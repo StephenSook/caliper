@@ -15,7 +15,9 @@ class Obs:
     call_date: str
 
 
-def make_obs(rater: str, agent: str, day: str, domain: str = "d", item: str = "i", passed: bool = True) -> Obs:
+def make_obs(
+    rater: str, agent: str, day: str, domain: str = "d", item: str = "i", passed: bool = True
+) -> Obs:
     return Obs(
         eval_id=f"{agent}|{day}",
         agent_ref=agent,

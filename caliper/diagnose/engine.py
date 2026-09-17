@@ -16,7 +16,7 @@ The reasoning the case asks for, in order:
 
 from __future__ import annotations
 
-from dataclasses import asdict, dataclass, field
+from dataclasses import asdict, dataclass
 
 from caliper.diagnose.corroborate import Corroboration, best_corroborator
 from caliper.diagnose.taxonomy import TAXONOMY, RootCause
@@ -37,7 +37,7 @@ MIN_SUBJECT_BREADTH = 3
 class Evidence:
     claim: str
     basis: str
-    tag: str                      # MEASURED, SOURCED, or ESTIMATE
+    tag: str  # MEASURED, SOURCED, or ESTIMATE
     regenerate: str | None = None
 
 
@@ -110,6 +110,7 @@ def rank_defects(observations, domain: str) -> list[dict]:
                 and len(failing_subjects) >= MIN_SUBJECT_BREADTH,
             }
         )
+
     # Ordering principle, stated before looking at which item it selects:
     #
     # An item that breaches BOTH the difficulty floor and the discrimination
@@ -123,8 +124,7 @@ def rank_defects(observations, domain: str) -> list[dict]:
     # breadth still order everything within each group.
     def sort_key(d: dict) -> tuple:
         impaired = (
-            "BELOW_DIFFICULTY_FLOOR" in d["item_flags"]
-            and "BELOW_DISCRIMINATION_FLOOR" in d["item_flags"]
+            "BELOW_DIFFICULTY_FLOOR" in d["item_flags"] and "BELOW_DISCRIMINATION_FLOOR" in d["item_flags"]
         )
         return (not impaired, -d["fails"], -d["breadth_subjects"], d["item_id"])
 
@@ -137,7 +137,9 @@ def rank_defects(observations, domain: str) -> list[dict]:
     return ranked
 
 
-def classify(defect: dict, curriculum_covered: bool) -> tuple[RootCause, RootCause | None, list[Evidence], list[RejectedAlternative]]:
+def classify(
+    defect: dict, curriculum_covered: bool
+) -> tuple[RootCause, RootCause | None, list[Evidence], list[RejectedAlternative]]:
     """Choose a primary cause from the measured properties of the item itself.
 
     The decisive question is not how often the behaviour failed. It is whether
@@ -155,59 +157,88 @@ def classify(defect: dict, curriculum_covered: bool) -> tuple[RootCause, RootCau
     universal = defect["breadth_subjects"] == defect["breadth_denominator"]
 
     if below_difficulty:
-        evidence.append(Evidence(
-            f"Item difficulty {p:.3f} sits below the {DIFFICULTY_FLOOR} floor.",
-            "computed from the supplied export", "MEASURED",
-            f"python -m caliper.instrument.audit --domain {defect['domain']}"))
+        evidence.append(
+            Evidence(
+                f"Item difficulty {p:.3f} sits below the {DIFFICULTY_FLOOR} floor.",
+                "computed from the supplied export",
+                "MEASURED",
+                f"python -m caliper.instrument.audit --domain {defect['domain']}",
+            )
+        )
     if below_discrimination:
-        evidence.append(Evidence(
-            f"Corrected point biserial {rpb:.3f} sits below the {DISCRIMINATION_FLOOR} floor.",
-            "computed from the supplied export", "MEASURED",
-            f"python -m caliper.instrument.audit --domain {defect['domain']}"))
+        evidence.append(
+            Evidence(
+                f"Corrected point biserial {rpb:.3f} sits below the {DISCRIMINATION_FLOOR} floor.",
+                "computed from the supplied export",
+                "MEASURED",
+                f"python -m caliper.instrument.audit --domain {defect['domain']}",
+            )
+        )
     if universal:
-        evidence.append(Evidence(
-            f"Every one of {defect['breadth_denominator']} subjects failed this item. "
-            "When everyone fails, the bar is the suspect rather than the population.",
-            "computed from the supplied export", "MEASURED", None))
+        evidence.append(
+            Evidence(
+                f"Every one of {defect['breadth_denominator']} subjects failed this item. "
+                "When everyone fails, the bar is the suspect rather than the population.",
+                "computed from the supplied export",
+                "MEASURED",
+                None,
+            )
+        )
 
     measurement_defect = below_difficulty and below_discrimination
 
     if measurement_defect:
         primary = RootCause.MEASUREMENT
-        rejected.append(RejectedAlternative(
-            RootCause.SKILL.value,
-            "Rejected. The behaviour is already covered by existing training, and failure spread "
-            "across nearly all sampled subjects is inconsistent with a skill distribution."
-            if curriculum_covered else
-            "Rejected. Failure spread across nearly all sampled subjects is inconsistent with a "
-            "skill distribution."))
-        rejected.append(RejectedAlternative(
-            RootCause.WILL.value,
-            "Rejected. The failure is uniform rather than concentrated, so there is no selective "
-            "performance pattern to attribute to choice."))
+        rejected.append(
+            RejectedAlternative(
+                RootCause.SKILL.value,
+                "Rejected. The behaviour is already covered by existing training, and failure spread "
+                "across nearly all sampled subjects is inconsistent with a skill distribution."
+                if curriculum_covered
+                else "Rejected. Failure spread across nearly all sampled subjects is inconsistent with a "
+                "skill distribution.",
+            )
+        )
+        rejected.append(
+            RejectedAlternative(
+                RootCause.WILL.value,
+                "Rejected. The failure is uniform rather than concentrated, so there is no selective "
+                "performance pattern to attribute to choice.",
+            )
+        )
         secondary = RootCause.KNOWLEDGE
     elif curriculum_covered and defect["fail_rate"] > 0.5:
         primary = RootCause.COACHING
         secondary = RootCause.KNOWLEDGE
-        rejected.append(RejectedAlternative(
-            RootCause.SKILL.value,
-            "Rejected. The behaviour is already covered in the existing curriculum, so a further "
-            "content module repeats what was taught rather than fixing why it did not stick."))
+        rejected.append(
+            RejectedAlternative(
+                RootCause.SKILL.value,
+                "Rejected. The behaviour is already covered in the existing curriculum, so a further "
+                "content module repeats what was taught rather than fixing why it did not stick.",
+            )
+        )
     else:
         primary = RootCause.SKILL
         secondary = RootCause.KNOWLEDGE
-        rejected.append(RejectedAlternative(
-            RootCause.MEASUREMENT.value,
-            f"Rejected. The item sits inside the usable band at difficulty {p:.3f}"
-            + (f" with discrimination {rpb:.3f}" if rpb is not None else "")
-            + ", so it can distinguish performers."))
+        rejected.append(
+            RejectedAlternative(
+                RootCause.MEASUREMENT.value,
+                f"Rejected. The item sits inside the usable band at difficulty {p:.3f}"
+                + (f" with discrimination {rpb:.3f}" if rpb is not None else "")
+                + ", so it can distinguish performers.",
+            )
+        )
 
     return primary, secondary, evidence, rejected
 
 
-def diagnose(observations, audit: dict, domain: str = "member_experience",
-             curriculum_covered: bool = True,
-             curriculum_source: str = "Training Outline, Week 6") -> Diagnosis:
+def diagnose(
+    observations,
+    audit: dict,
+    domain: str = "member_experience",
+    curriculum_covered: bool = True,
+    curriculum_source: str = "Training Outline, Week 6",
+) -> Diagnosis:
     ranked = rank_defects(observations, domain)
     top = ranked[0]
 
@@ -218,15 +249,25 @@ def diagnose(observations, audit: dict, domain: str = "member_experience",
     primary, secondary, evidence, rejected = classify(top, curriculum_covered)
 
     if corr is not None:
-        evidence.append(Evidence(
-            f"Corroborated on the same {corr.shared_evaluations} evaluations by "
-            f"'{corr.item_text}' ({corr.domain}), phi {corr.phi:.3f}.",
-            "computed from the supplied export", "MEASURED", None))
+        evidence.append(
+            Evidence(
+                f"Corroborated on the same {corr.shared_evaluations} evaluations by "
+                f"'{corr.item_text}' ({corr.domain}), phi {corr.phi:.3f}.",
+                "computed from the supplied export",
+                "MEASURED",
+                None,
+            )
+        )
 
     if curriculum_covered:
-        evidence.append(Evidence(
-            f"The behaviour is already covered by existing training ({curriculum_source}).",
-            "supplied training outline", "SOURCED", None))
+        evidence.append(
+            Evidence(
+                f"The behaviour is already covered by existing training ({curriculum_source}).",
+                "supplied training outline",
+                "SOURCED",
+                None,
+            )
+        )
 
     # Individual attribution is licensed only when rater severity is separable
     # from subject ability AND there are enough observations per subject. Neither
@@ -255,12 +296,19 @@ def diagnose(observations, audit: dict, domain: str = "member_experience",
         },
         corroboration=(
             {
-                "item_id": corr.item_id, "item_text": corr.item_text, "domain": corr.domain,
-                "shared_evaluations": corr.shared_evaluations, "co_fail_count": corr.co_fail_count,
-                "phi": round(corr.phi, 4), "cells": corr.cells, "note": corr.note,
-            } if corr else {
+                "item_id": corr.item_id,
+                "item_text": corr.item_text,
+                "domain": corr.domain,
+                "shared_evaluations": corr.shared_evaluations,
+                "co_fail_count": corr.co_fail_count,
+                "phi": round(corr.phi, 4),
+                "cells": corr.cells,
+                "note": corr.note,
+            }
+            if corr
+            else {
                 "note": "No second item on these evaluations clears the association floor. "
-                        "Co failure alone is reported without being called corroboration."
+                "Co failure alone is reported without being called corroboration."
             }
         ),
         existing_curriculum_coverage={"covered": curriculum_covered, "source": curriculum_source},

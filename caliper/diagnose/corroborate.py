@@ -52,8 +52,7 @@ def scan(observations, target_domain: str, target_item_id: str) -> list[Corrobor
         raise ValueError(f"no observations for {target_domain}/{target_item_id}")
 
     candidates = sorted(
-        {(o.domain, o.item_id, o.item_text) for o in observations}
-        - {(target_domain, target_item_id, "")},
+        {(o.domain, o.item_id, o.item_text) for o in observations} - {(target_domain, target_item_id, "")},
         key=lambda t: (t[0], t[1]),
     )
 
@@ -85,10 +84,7 @@ def scan(observations, target_domain: str, target_item_id: str) -> list[Corrobor
             note = f"Association too weak to corroborate (phi {phi:.3f})."
         else:
             corroborating = True
-            note = (
-                f"Corroborates: {cells['n11']} of {len(shared)} evaluations failed both, "
-                f"phi {phi:.3f}."
-            )
+            note = f"Corroborates: {cells['n11']} of {len(shared)} evaluations failed both, phi {phi:.3f}."
 
         results.append(
             Corroboration(
@@ -109,8 +105,9 @@ def scan(observations, target_domain: str, target_item_id: str) -> list[Corrobor
     return results
 
 
-def best_corroborator(observations, target_domain: str, target_item_id: str,
-                      cross_domain_only: bool = False) -> Corroboration | None:
+def best_corroborator(
+    observations, target_domain: str, target_item_id: str, cross_domain_only: bool = False
+) -> Corroboration | None:
     for candidate in scan(observations, target_domain, target_item_id):
         if not candidate.is_corroborating:
             continue

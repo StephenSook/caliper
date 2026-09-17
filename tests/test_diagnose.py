@@ -6,10 +6,11 @@ can only run on one machine is not a guard.
 
 from __future__ import annotations
 
+from conftest import Obs
+
 from caliper.diagnose.corroborate import scan
 from caliper.diagnose.engine import classify, diagnose, rank_defects
 from caliper.diagnose.taxonomy import TAXONOMY, RootCause, environment_first
-from conftest import Obs
 
 
 def design(spec: list[tuple[str, str, str, bool]], domain: str = "member_experience") -> list[Obs]:
@@ -32,8 +33,12 @@ def design(spec: list[tuple[str, str, str, bool]], domain: str = "member_experie
 def _fake_audit(**over):
     base = {
         "connectivity": {
-            "verdict": "FRAGILE", "calls_double_scored": 0, "n_calls": 6,
-            "linkage_fragility": 2, "n_subjects": 6, "bridge_subjects": ["A2", "A3"],
+            "verdict": "FRAGILE",
+            "calls_double_scored": 0,
+            "n_calls": 6,
+            "linkage_fragility": 2,
+            "n_subjects": 6,
+            "bridge_subjects": ["A2", "A3"],
             "remedy": {"action": "link", "citation": "DeMars 2023", "minimum_linking_calls": 6},
         },
         "domains": {"member_experience": {"sufficiency": {"mean_evaluations_per_subject": 1.7}}},
@@ -69,10 +74,22 @@ def test_E3_skill_and_measurement_are_distinguished_by_the_item_not_the_count():
     A functioning item that many people fail is a workforce finding. An item that
     breaches both psychometric floors is a finding about the item.
     """
-    functioning = {"difficulty_p": 0.45, "discrimination_rpb": 0.35, "fail_rate": 0.55,
-                   "breadth_subjects": 5, "breadth_denominator": 10, "domain": "d"}
-    impaired = {"difficulty_p": 0.17, "discrimination_rpb": 0.08, "fail_rate": 0.82,
-                "breadth_subjects": 8, "breadth_denominator": 10, "domain": "d"}
+    functioning = {
+        "difficulty_p": 0.45,
+        "discrimination_rpb": 0.35,
+        "fail_rate": 0.55,
+        "breadth_subjects": 5,
+        "breadth_denominator": 10,
+        "domain": "d",
+    }
+    impaired = {
+        "difficulty_p": 0.17,
+        "discrimination_rpb": 0.08,
+        "fail_rate": 0.82,
+        "breadth_subjects": 8,
+        "breadth_denominator": 10,
+        "domain": "d",
+    }
 
     cause_f, _, _, _ = classify(functioning, curriculum_covered=False)
     cause_i, _, _, rejected_i = classify(impaired, curriculum_covered=True)
@@ -85,8 +102,14 @@ def test_E3_skill_and_measurement_are_distinguished_by_the_item_not_the_count():
 def test_E4_training_is_correctly_rejected_on_a_measurement_defect():
     """The moment the case explicitly asks for: the system declines to recommend
     training when the evidence points at the instrument."""
-    impaired = {"difficulty_p": 0.17, "discrimination_rpb": 0.08, "fail_rate": 0.82,
-                "breadth_subjects": 10, "breadth_denominator": 10, "domain": "d"}
+    impaired = {
+        "difficulty_p": 0.17,
+        "discrimination_rpb": 0.08,
+        "fail_rate": 0.82,
+        "breadth_subjects": 10,
+        "breadth_denominator": 10,
+        "domain": "d",
+    }
     cause, _, evidence, _ = classify(impaired, curriculum_covered=True)
     assert cause == RootCause.MEASUREMENT
     assert TAXONOMY[cause].is_training is False
@@ -139,7 +162,7 @@ def test_gilbert_orders_environment_causes_before_person_causes():
 
 
 def test_every_cause_declares_whether_it_is_training():
-    for cause, spec in TAXONOMY.items():
+    for spec in TAXONOMY.values():
         assert isinstance(spec.is_training, bool)
         assert spec.default_intervention
         assert spec.diagnostic_question.endswith("?")
