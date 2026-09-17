@@ -7,7 +7,20 @@
  * argument about not asserting figures you cannot regenerate.
  */
 
+/**
+ * Empty means "same origin", which is what the single origin deployment uses:
+ * the backend serves this bundle, so /api and /ws are relative and there is no
+ * cross origin story to get wrong. A separate value is only for `vite dev`,
+ * where the interface and the API run on different ports.
+ */
 const BASE = import.meta.env.VITE_API_BASE ?? "http://127.0.0.1:8000";
+
+/** WebSocket origin. A relative BASE has to become an absolute ws or wss URL. */
+export function wsBase(): string {
+  if (BASE) return BASE.replace(/^http/, "ws");
+  const scheme = window.location.protocol === "https:" ? "wss" : "ws";
+  return `${scheme}://${window.location.host}`;
+}
 
 export interface ItemStat {
   item_id: string;

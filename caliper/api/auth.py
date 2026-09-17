@@ -91,7 +91,7 @@ def resolve_operator(
     )
 
 
-def check_websocket_origin(origin: str | None) -> bool:
+def check_websocket_origin(origin: str | None, host: str | None = None) -> bool:
     """Validate the Origin of a WebSocket handshake.
 
     This is NOT redundant with the CORS middleware. The browser same origin
@@ -105,6 +105,17 @@ def check_websocket_origin(origin: str | None) -> bool:
     """
     if origin is None:
         return not auth_required()
+
+    # Same origin is always allowed. The interface is served by this same server,
+    # so on a tunnel or any deployment the Origin is whatever hostname the client
+    # reached us on, and that hostname cannot be known in advance. Comparing it to
+    # the Host header is exactly the same origin test, and it does not widen the
+    # check: a hostile page is on a DIFFERENT origin by definition.
+    if host:
+        origin_host = origin.split("://", 1)[-1].rstrip("/")
+        if origin_host == host:
+            return True
+
     return origin in allowed_origins()
 
 

@@ -169,3 +169,16 @@ def test_without_a_secret_the_websocket_operator_is_unverified_not_refused(monke
     op = resolve_operator_ws(None)
     assert op is not None
     assert op.verified is False
+
+
+def test_same_origin_is_always_allowed_because_the_hostname_is_not_knowable(monkeypatch):
+    """The interface is served by this same server, so on a tunnel or any deploy
+    the Origin is whatever hostname the client reached us on, which cannot be
+    listed in advance. Comparing Origin to Host is exactly the same origin test
+    and does not widen anything: a hostile page is on a different origin by
+    definition."""
+    monkeypatch.setenv("CALIPER_OPERATOR_TOKEN", "tok")
+    tunnel = "caliper-demo.trycloudflare.com"
+    assert check_websocket_origin(f"https://{tunnel}", host=tunnel) is True
+    assert check_websocket_origin("https://evil.example", host=tunnel) is False
+    assert check_websocket_origin(f"https://{tunnel}", host="other.host") is False

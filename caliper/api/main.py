@@ -19,6 +19,7 @@ from pathlib import Path
 from fastapi import FastAPI, Header, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import Response
+from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from caliper import pipeline
@@ -283,7 +284,7 @@ async def practice(ws: WebSocket, run_id: str) -> None:
     # handshake. Accepting first and checking afterwards would mean an
     # unauthorised page had already opened a live socket to the model.
     origin = ws.headers.get("origin")
-    if not check_websocket_origin(origin):
+    if not check_websocket_origin(origin, ws.headers.get("host")):
         await ws.close(code=1008)
         return
 
@@ -370,3 +371,14 @@ async def practice(ws: WebSocket, run_id: str) -> None:
 def list_runs() -> dict:
     latest = store.latest()
     return {"latest_run_id": latest}
+
+
+# The built interface is served from the SAME ORIGIN as the API.
+#
+# One origin means one HTTPS address, one QR code for a judge's phone, and no
+# cross origin problem for either fetch or the WebSocket. It is also the only
+# way a phone gets a microphone at all: getUserMedia needs a secure context, and
+# a laptop's LAN address over plain HTTP is not one.
+_DIST = Path("frontend/dist")
+if _DIST.is_dir():
+    app.mount("/", StaticFiles(directory=str(_DIST), html=True), name="interface")

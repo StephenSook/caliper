@@ -58,16 +58,24 @@ export function QuantileDotplot({ reliability }: { reliability: Reliability }) {
           { v: research, label: "research 0.70" },
           { v: thresholds.applied ?? 0.8, label: "applied 0.80" },
           { v: thresholds.individual_decisions ?? 0.9, label: "decisions about people 0.90" },
-        ].map((t, i) => (
-          <div className="qdp-threshold" key={t.label} style={{ left: `${pos(t.v)}%` }}>
-            <span
-              className="qdp-threshold-label mono"
-              style={{ top: `${-8 + (i % 2) * 15}px` }}
-            >
-              {t.label}
-            </span>
-          </div>
-        ))}
+        ].map((t, i) => {
+          // A label past the midpoint grows to the LEFT of its tick. Anchoring
+          // everything on the left pushes the rightmost labels off the viewport,
+          // which on a phone makes the whole page scroll sideways and is
+          // structurally invisible on a desktop.
+          const at = pos(t.v);
+          const flip = at > 58;
+          return (
+            <div className="qdp-threshold" key={t.label} style={{ left: `${at}%` }}>
+              <span
+                className={`qdp-threshold-label mono${flip ? " is-flipped" : ""}`}
+                style={{ top: `${-8 + (i % 2) * 15}px` }}
+              >
+                {t.label}
+              </span>
+            </div>
+          );
+        })}
 
         <div className="qdp-ci" style={{ left: `${pos(ci_low)}%`, width: `${pos(ci_high) - pos(ci_low)}%` }} />
 

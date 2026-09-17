@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioPlayer, MicCapture, microphoneBlockedReason } from "../lib/audio";
-import { BASE_URL } from "../lib/api";
+import { wsBase } from "../lib/api";
 
 /**
  * Screen six. The practice call, and the proof.
@@ -73,7 +73,7 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
     try {
       const token = localStorage.getItem("caliper_operator_token");
       const url =
-        BASE_URL.replace(/^http/, "ws") +
+        wsBase() +
         `/ws/practice/${runId}` +
         (token ? `?token=${encodeURIComponent(token)}` : "");
 
