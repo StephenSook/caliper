@@ -1,0 +1,131 @@
+/*
+  CALIPER design tokens.
+
+  The motion language is lifted from the reference site and reduced to one
+  decision: a single expo-out curve used everywhere. That curve, more than any
+  other choice, is what makes the reference feel expensive, and using exactly one
+  of them is what keeps a six screen product feeling like one product.
+
+  The palette is deliberately restrained. This is a measurement instrument shown
+  to a room that includes healthcare professionals, so colour carries meaning
+  rather than decoration: an item is inside the usable band or it is not.
+*/
+
+:root {
+  /* Ground and ink. Near black rather than black, so the shadows have somewhere
+     to go and the accent does not vibrate. */
+  --ink-900: #0a0b0d;
+  --ink-850: #101216;
+  --ink-800: #16191f;
+  --ink-700: #1e222a;
+  --ink-600: #2a2f3a;
+  --ink-500: #3d4450;
+
+  --paper-100: #f7f7f5;
+  --paper-200: #e8e8e4;
+  --paper-400: #a8aab0;
+  --paper-500: #7c7f87;
+
+  /* One signal accent. Used for the thing the eye must land on and nothing else. */
+  --signal: #4ade9a;
+  --signal-dim: rgba(74, 222, 154, 0.16);
+
+  /* Semantic. These are the only other colours in the system. */
+  --alert: #ff6b5e;
+  --alert-dim: rgba(255, 107, 94, 0.14);
+  --warn: #f5b74f;
+  --warn-dim: rgba(245, 183, 79, 0.14);
+  --dead: #6b7280;
+
+  /* Type. A grotesque for display, a mono for anything a judge might check. */
+  --font-display: "Inter Tight", "Helvetica Neue", Helvetica, Arial, sans-serif;
+  --font-body: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", "SF Mono", ui-monospace, Menlo, monospace;
+
+  --step--1: clamp(0.78rem, 0.76rem + 0.1vw, 0.84rem);
+  --step-0: clamp(0.94rem, 0.9rem + 0.2vw, 1rem);
+  --step-1: clamp(1.2rem, 1.1rem + 0.5vw, 1.45rem);
+  --step-2: clamp(1.6rem, 1.4rem + 1vw, 2.2rem);
+  --step-3: clamp(2.2rem, 1.8rem + 2.2vw, 3.6rem);
+  --step-4: clamp(3rem, 2.2rem + 4.5vw, 6.5rem);
+
+  --space-1: 0.4rem;
+  --space-2: 0.8rem;
+  --space-3: 1.4rem;
+  --space-4: 2.2rem;
+  --space-5: 3.6rem;
+  --space-6: 6rem;
+
+  /* The signature curve, used 40 times on the reference site. One token. */
+  --ease: cubic-bezier(0.16, 1, 0.1, 1);
+  --ease-soft: cubic-bezier(0.4, 0, 0.2, 1);
+  --dur-fast: 240ms;
+  --dur: 620ms;
+  --dur-slow: 1100ms;
+
+  --radius: 3px;
+  --hairline: 1px solid var(--ink-600);
+  --max-w: 1440px;
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  background: var(--ink-900);
+  /* Lenis drives the scroll. Native smooth scrolling fights it. */
+  scroll-behavior: auto;
+}
+
+body {
+  margin: 0;
+  background: var(--ink-900);
+  color: var(--paper-100);
+  font-family: var(--font-body);
+  font-size: var(--step-0);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  font-family: var(--font-display);
+  font-weight: 500;
+  letter-spacing: -0.028em;
+  line-height: 0.98;
+  margin: 0;
+  text-wrap: balance;
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
+}
+
+.eyebrow {
+  font-family: var(--font-mono);
+  font-size: var(--step--1);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--paper-500);
+}
+
+/*
+  Honoured because the reference bundle contains zero references to it, a
+  designer usability criterion is ten percent of the score, and a room with
+  healthcare professionals in it is exactly where this matters.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

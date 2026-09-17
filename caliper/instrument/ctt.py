@@ -62,6 +62,18 @@ class Reliability:
     n_items: int
     verdict: str
     verdict_reason: str
+    # Quantiles of the sampling distribution, for a quantile dotplot.
+    #
+    # Peer reviewed evidence (Fernandes, Walls, Munson, Hullman and Kay, CHI 2018,
+    # doi 10.1145/3173574.3173718) found quantile dotplots produced decisions at
+    # 97 percent of optimal payoff against 92 percent for an error bar control.
+    # A non expert reads twenty dots below a line as a probability; they read a
+    # whisker as a boundary, which is the wrong intuition entirely.
+    #
+    # Computed here rather than in the interface, because the interface holds no
+    # statistics: a number typed into a component is a number that can drift from
+    # the one the engine computes.
+    quantiles: tuple[float, ...] = ()
 
 
 def kr20(item_matrix: np.ndarray) -> float:
@@ -108,11 +120,25 @@ def feldt_ci(alpha_hat: float, n: int, k: int, level: float = 0.95) -> tuple[flo
     return float(low), float(high)
 
 
+def feldt_quantiles(alpha_hat: float, n: int, k: int, count: int = 50) -> tuple[float, ...]:
+    """`count` equally spaced quantiles of the sampling distribution of alpha.
+
+    Feldt gives (1 - alpha_hat)/(1 - alpha) ~ F(n-1, (n-1)(k-1)). Inverting at
+    evenly spaced probabilities yields the dots. Note the direction: alpha falls
+    as F rises, so quantile q of alpha uses the (1 - q) quantile of F.
+    """
+    df1 = n - 1
+    df2 = (n - 1) * (k - 1)
+    probs = [(i + 0.5) / count for i in range(count)]
+    return tuple(float(1 - (1 - alpha_hat) * stats.f.ppf(1 - q, df1, df2)) for q in probs)
+
+
 def reliability_report(item_matrix: np.ndarray, level: float = 0.95) -> Reliability:
     matrix = np.asarray(item_matrix, dtype=float)
     n, k = matrix.shape
     alpha = kr20(matrix)
     low, high = feldt_ci(alpha, n, k, level)
+    quantiles = feldt_quantiles(alpha, n, k)
 
     # The verdict is about what the SAMPLE can establish, not about the form.
     # An interval spanning from at-or-below zero to nearly adequate means the
@@ -147,6 +173,7 @@ def reliability_report(item_matrix: np.ndarray, level: float = 0.95) -> Reliabil
         n_items=k,
         verdict=verdict,
         verdict_reason=reason,
+        quantiles=quantiles,
     )
 
 
