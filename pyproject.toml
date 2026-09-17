@@ -15,6 +15,16 @@ dependencies = [
 [project.optional-dependencies]
 dev = ["pytest", "pytest-asyncio", "ruff"]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+# Declared explicitly. Once frontend/ exists, flat layout autodiscovery sees two
+# top level packages and refuses to build at all, which fails the install step in
+# CI long before any test runs.
+[tool.setuptools.packages.find]
+include = ["caliper*"]
+
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = [".", "tests"]
