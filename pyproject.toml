@@ -6,6 +6,10 @@ requires-python = ">=3.11"
 dependencies = [
   "pandas", "numpy", "scipy", "pingouin", "statsmodels", "networkx", "openpyxl",
   "fastapi", "uvicorn[standard]", "websockets", "boto3",
+  # Nova 2 Sonic bidirectional streaming. boto3 does not carry the operation,
+  # and the default aiohttp transport cannot do duplex event streaming, so the
+  # AWS Common Runtime transport is required for HTTP/2.
+  "aws-sdk-bedrock-runtime", "awscrt",
 ]
 
 [project.optional-dependencies]
