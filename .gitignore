@@ -78,3 +78,8 @@ keystore.properties
 *.p8
 *.p12
 *.mobileprovision
+
+# Recorded demo footage. Large, and a screen capture of a run shows the supplied
+# case package rendered on screen, which does not belong in a public repository
+# however de-identified the interface is.
+artifacts/
