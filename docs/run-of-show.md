@@ -17,8 +17,14 @@ Rehearse this out loud twice with a timer. Not reading it, saying it.
 Ten minutes before, in this order:
 
 ```
-python scripts/preflight_demo.py          # exits 0 or tells you what is broken
+python scripts/preflight_demo.py --local http://127.0.0.1:8000
+python scripts/smoke_voice.py             # exercises the call itself, no headset needed
 ```
+
+The first exits 0 or names what is broken, across the deployed instance, the
+laptop, the published binary, every judge facing figure and CI. The second
+synthesises a three turn call through the real socket and tells you whether the
+model answered. Neither needs a person to speak.
 
 Then:
 
@@ -28,6 +34,18 @@ Then:
 4. The tunnel running, and the phone pointed at it, so the call works.
 5. Headset on, not the open room microphone.
 6. The backup recording open in a second window, one keypress from playing.
+   Regenerate it any time with:
+
+   ```
+   python scripts/make_call_audio.py
+   node frontend/scripts/record-call.mjs --base=http://127.0.0.1:8000
+   ```
+
+   It drives the REAL browser through a fake microphone, so the criteria on
+   screen are filled by the real scorer. **It has no sound**, deliberately: the
+   recorder captures the screen and not the room, so narrate over it. The
+   representative's voice in it is synthesised, which is fine for insurance and
+   is never presented as a person.
 7. `https://caliper-77ma.onrender.com/judge` open on a spare device in case a
    judge wants to hold something.
 
@@ -256,7 +274,7 @@ If time remains, open `/judge` and let them read it themselves.
 
 | What | Do this |
 |---|---|
-| The call will not connect | Say it in one sentence, play the recording, continue. |
+| The call will not connect | Say it in one sentence, play the recording, narrate over it, continue. |
 | The tunnel is down | The laptop demo needs no tunnel. Skip the phone beat. |
 | The laptop dies | `https://caliper-77ma.onrender.com/judge` on a phone. Everything but the call is there. |
 | A number looks wrong on screen | Read what is on screen, not what you remember. The screen is computed. |
