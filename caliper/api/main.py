@@ -134,6 +134,34 @@ class DecisionBody(BaseModel):
     note: str = ""
 
 
+def speech_available() -> bool:
+    """Whether this instance can actually hold a spoken call.
+
+    The deterministic half of CALIPER needs no credentials at all, which is what
+    lets the audit, the diagnosis, the workbook and the golden cases run on a
+    public host that holds nothing. The practice call needs a speech model, and
+    therefore credentials, and an instance without them cannot take a call.
+
+    This exists because the alternative failure is the worst one available. The
+    socket opened, the call screen said connected, the timer ran, and nothing
+    ever happened: no error, no message, no close. Someone would sit there
+    watching a stopwatch. Knowing the answer BEFORE anyone presses start turns
+    that into a sentence on screen.
+
+    Resolution is the standard chain, so this is true on a laptop with a profile,
+    on an instance with a role, and false on a host that was deliberately given
+    neither.
+    """
+    try:
+        import boto3
+
+        return boto3.Session().get_credentials() is not None
+    except Exception:
+        # A missing or broken SDK is indistinguishable from no credentials as far
+        # as the person holding the phone is concerned.
+        return False
+
+
 @app.get("/api/health")
 def health() -> dict:
     """Unauthenticated liveness. Reports configuration, never a secret."""
@@ -144,6 +172,9 @@ def health() -> dict:
         "voice_model": os.environ.get("CALIPER_VOICE_MODEL_ID", "amazon.nova-2-sonic-v1:0"),
         "aws_region": os.environ.get("AWS_REGION", "us-east-1"),
         "deterministic_core_requires_aws": False,
+        # The interface reads this to decide whether to offer a live call at all,
+        # rather than offering one that cannot happen.
+        "speech_available": speech_available(),
         "operator_auth_enforced": auth_required(),
         "allowed_origins": allowed_origins(),
     }
@@ -379,6 +410,29 @@ async def practice(ws: WebSocket, run_id: str) -> None:
     # The browser aborts unless the server echoes back one of the offered
     # subprotocols.
     await ws.accept(subprotocol=echo_protocol) if echo_protocol else await ws.accept()
+    # Refuse a call this instance cannot hold, and say why.
+    #
+    # Without this the socket opens, the call screen reports connected, the timer
+    # starts, and nothing ever arrives: no audio, no transcript, no error and no
+    # close. Someone watches a stopwatch until they give up. A silence is the
+    # only failure mode with no diagnosis attached, so it gets converted into a
+    # sentence before anyone can reach it.
+    if not speech_available():
+        await ws.send_json(
+            {
+                "type": "unavailable",
+                "reason": "no_speech_credentials",
+                "detail": (
+                    "This instance runs the deterministic audit, which needs no credentials, "
+                    "and that is why it can be public. A spoken call needs a speech model and "
+                    "therefore credentials, which this host was deliberately not given. Point "
+                    "the app at an instance that holds them to take the call."
+                ),
+            }
+        )
+        await ws.close()
+        return
+
     persona = _load_persona()
     if persona is None:
         await ws.send_json({"type": "error", "detail": "no persona configuration is installed"})

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { AudioPlayer, MicCapture, microphoneBlockedReason } from "../lib/audio";
-import { wsBase } from "../lib/api";
+import { api, wsBase } from "../lib/api";
 
 /**
  * Screen six. The practice call, and the proof.
@@ -37,6 +37,38 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
   const transcriptEnd = useRef<HTMLDivElement>(null);
 
   const blocked = microphoneBlockedReason();
+
+  /*
+    Whether this host can hold a call at all.
+
+    The deterministic half of CALIPER needs no credentials, which is exactly what
+    lets it run on a public instance. A spoken call needs a speech model and
+    therefore credentials, so a public instance cannot take one. Asking BEFORE
+    offering the button is the difference between a sentence on screen and the
+    worst failure this product has: the socket opens, the timer runs, and nothing
+    ever arrives.
+
+    null means not asked yet, so the button is neither offered nor withdrawn on a
+    guess.
+  */
+  const [speech, setSpeech] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    api
+      .health()
+      .then((h) => {
+        if (!cancelled) setSpeech(h.speech_available !== false);
+      })
+      .catch(() => {
+        // A health check that cannot be reached says nothing about credentials.
+        // Leave the button alone and let the socket answer.
+        if (!cancelled) setSpeech(true);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   useEffect(() => {
     if (!connected) return;
@@ -94,6 +126,11 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
         } else if (event.type === "interrupted") {
           // Nova runs ahead of real time. Anything queued but unheard is stale.
           player.current?.clear();
+        } else if (event.type === "unavailable") {
+          // The server refused, and said why. Surface its sentence rather than a
+          // generic failure, because the reason is the useful part.
+          setSpeech(false);
+          setError(event.detail);
         } else if (event.type === "score") {
           setCriteria(event.criteria);
         } else if (event.type === "ready") {
@@ -139,6 +176,17 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
         </p>
       </header>
 
+      {speech === false && (
+        <div className="mic-blocked">
+          <strong>This instance cannot take a live call.</strong> It runs the
+          deterministic audit, which needs no credentials, and that is why it can
+          be public. A spoken call needs a speech model and therefore
+          credentials, which this host was deliberately not given. Everything
+          else on this screen is real: the criteria below are the rewritten form
+          the audit produced, and they are what a call is scored against.
+        </div>
+      )}
+
       {blocked && (
         <div className="mic-blocked">
           <strong>Microphone unavailable.</strong> {blocked}
@@ -179,8 +227,16 @@ export function Practice({ runId, scoredItemId }: { runId: string; scoredItemId?
 
           <div className="pc-controls">
             {!connected ? (
-              <button className="cta" onClick={start} disabled={starting || !!blocked}>
-                {starting ? "Connecting" : "Start the practice call"}
+              <button
+                className="cta"
+                onClick={start}
+                disabled={starting || !!blocked || speech === false}
+              >
+                {starting
+                  ? "Connecting"
+                  : speech === false
+                    ? "Live call unavailable on this instance"
+                    : "Start the practice call"}
               </button>
             ) : (
               <>
