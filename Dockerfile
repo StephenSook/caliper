@@ -14,7 +14,11 @@
 FROM node:22-slim AS interface
 WORKDIR /build
 COPY frontend/package.json frontend/package-lock.json ./
-RUN npm ci --omit=optional
+# NOT --omit=optional. Rollup, which vite builds with, ships its native binary as
+# a PLATFORM SPECIFIC OPTIONAL dependency, so omitting optional dependencies
+# removes the one thing the build needs and the failure is an opaque module
+# resolution error rather than anything about optional packages.
+RUN npm ci
 COPY frontend/ ./
 RUN npx vite build
 
