@@ -40,6 +40,13 @@ SURFACES = [
     "docs/mobile.md",
     "docs/data-handling.md",
     "caliper/api/judge.py",
+    # The demo guide was written outside this list and immediately drifted: it
+    # carried a Business Process lower bound of -0.224 while the engine computes
+    # -0.22348 and the README said -0.223. A presenter reads the guide at the
+    # table, so it is a judge facing surface in every way that matters, and the
+    # only reason the contradiction survived is that nothing was checking it.
+    "docs/dan-demo-guide.md",
+    "docs/dan-demo-guide.html",
 ]
 
 
