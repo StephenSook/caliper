@@ -90,6 +90,13 @@ def render(evidence: dict, golden: dict, base: str = "") -> str:
     co_dead = inst["compliance"]["items_zero_variance"]
     co_items = inst["compliance"]["n_items"]
 
+    # Deep link the ledger rather than describing it. A reader who is told the
+    # audit trail records whether an actor was proven should be one click from
+    # the audit trail.
+    from caliper.api.main import store as _store
+
+    latest_run = _store.latest() or ""
+
     imp_baseline = e(imp["baseline"]["label"])
     imp_ratio = imp["baseline"]["hours_per_curriculum_hour"]
     imp_spread = imp["baseline_choice_matters"]["ratio"]
@@ -220,6 +227,15 @@ teach back is an established payer call centre standard, because we searched and
 could not find one. We do not report a reliability figure without its interval.
 Where the supplied files gave us no data, the outputs say so instead of carrying a
 plausible number.</p>
+<p>And this instance takes runs from anyone. It is public on purpose, with no
+credential, so that the evidence is reachable without logging in. That means a
+stranger can start a run here and a stranger can approve a diagnosis here, and
+the honest consequence is visible rather than hidden: every decision this host
+records carries <code>decided_by_verified: false</code> in the ledger, which is
+the same treatment an unproven approval gets on an instance that does enforce a
+credential. An approval whose actor could not be proven is stored as a claim and
+labelled as one. Read
+<a href="{base}/api/runs/{latest_run}/ledger">the ledger</a> and check.</p>
 </div>
 
 <h2>Golden cases, executed when you loaded this page</h2>
