@@ -74,15 +74,66 @@ supplied export. Run `python -m caliper.instrument.audit` to reproduce them.
 ## Design principle
 
 **Deterministic core, model periphery.** Every count, rate, statistic, identifier,
-schema validation and coverage figure is computed in ordinary Python. Language
-models do exactly three things: interpret evidence into prose, draft intervention
-content, and play the member in the voice simulation.
+schema validation, dollar figure and coverage number is computed in ordinary
+Python.
+
+**A language model does exactly one thing in this system: it plays the member in
+the practice call.** That is not a claim about restraint, it is a fact about the
+code, and it is checkable. There is exactly one module that imports a model SDK,
+`caliper/voice/sonic_session.py`, and `tests/test_no_model_in_the_core.py` fails
+if a second one ever appears. The diagnosis narrative, the training objectives,
+the activity, the drill script and the six workbook tabs are templates filled
+from computed values.
 
 **A model never decides anything and never performs arithmetic.** If you ask how
-we know a model did not hallucinate a number, the answer is that no model
-produced any number.
+we know a model did not hallucinate a number, the answer is that there is one
+model call in the entire system and it is a synthetic member speaking.
 
 ---
+
+## Architecture and where a human decides
+
+[docs/architecture.md](docs/architecture.md) has both diagrams: the agent, and
+the run state machine the approval gate lives in. The shape of the first one is
+the argument. Everything that produces a number, a verdict, a dollar figure or a
+piece of training content sits in the deterministic core; the single model call
+is a synthetic member talking, and nothing flows from it back into a number.
+
+## What one wrong diagnosis costs
+
+The case study asks for savings on labor and cost, USA against Mexico or the
+Philippines, and `caliper/impact/labor.py` answers it from the sponsor's own
+report. Per hour of finished curriculum:
+
+| | Philippines | Mexico | USA |
+|---|---|---|---|
+| Fully loaded hourly | $6.49 | $14.25 | $49.85 |
+| Cost per curriculum hour | $17.91 | $39.33 | $137.59 |
+| **One avoided rework cycle** | **$23.36** | **$51.30** | **$179.46** |
+
+USA runs 7.7 times the Philippines and 3.5 times Mexico, fully loaded.
+
+The right hand row is the figure this product can stand behind: a needs analysis
+that lands on the wrong root cause produces training that addresses the wrong
+behaviour, which is found downstream and fixed by revising it, and the report
+prices a revision at 3.60 build hours per curriculum hour from the team's own
+tracked time.
+
+**The baseline is the whole story, and it is the easiest thing in the package to
+get wrong.** The report gives two build ratios that differ by 6.3 times: 2.76
+hours per curriculum hour weighted across 26 actual projects of every request
+type, and 17.47 for brand new builds only including a stated 20 percent buffer.
+They are not contradictory, they answer different questions, and a savings figure
+that does not say which one it used is not a savings figure.
+
+**What we will not do is multiply that by a rate of misdiagnosis.** Nobody has
+measured how often a needs analysis lands on the wrong cause, the supplied package
+does not contain it, and a real cost times a guessed frequency is a large number
+with nothing underneath it. `savings_claim` refuses until the frequency and its
+source are both supplied, and records that they were.
+
+Change the assumption yourself at
+[/api/impact?curriculum_hours=2](https://caliper-77ma.onrender.com/api/impact?curriculum_hours=2).
 
 ## Layout
 

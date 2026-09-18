@@ -20,6 +20,8 @@ from __future__ import annotations
 import html
 import time
 
+from caliper.impact import labor
+
 STYLE = """
 :root { color-scheme: dark; }
 * { box-sizing: border-box; }
@@ -68,6 +70,21 @@ def render(evidence: dict, golden: dict, base: str = "") -> str:
     e = html.escape
     inst = evidence["instruments"]
     conn = evidence["connectivity"]
+
+    # Labor and cost. One curriculum hour, so a reader can multiply in their head
+    # rather than reverse engineer whatever total we picked.
+    imp_hours = 1.0
+    imp = labor.compare(imp_hours)
+    imp_rows = "".join(
+        f"<tr><td>{e(r['geography'])}</td>"
+        f"<td>${r['fully_loaded_hourly']:.2f}</td>"
+        f"<td>${r['cost_per_curriculum_hour']:,.2f}</td>"
+        f"<td><b>${r['rework_cycle_cost']:,.2f}</b></td></tr>"
+        for r in imp["rows"]
+    )
+    imp_baseline = e(imp["baseline"]["label"])
+    imp_ratio = imp["baseline"]["hours_per_curriculum_hour"]
+    imp_spread = imp["baseline_choice_matters"]["ratio"]
 
     rows = "".join(
         f"<tr><td>{e(NAMES.get(k, k))}</td>"
@@ -156,6 +173,35 @@ one thing, read the box below.</p>
   {conn["calls_double_scored"]} of {conn["n_calls"]} calls were ever scored by both
   evaluators, so the connection runs agent to agent across different calls on
   different days. Verdict: <span class="bad">{e(conn["verdict"])}</span>.</p>
+</div>
+
+<h2>What one wrong diagnosis costs</h2>
+<div class="card">
+<p class="lede">The case study asks for savings on labor and cost, USA against Mexico
+or the Philippines. Here it is, at the sponsor's own rates, for {imp_hours} hour of
+finished curriculum.</p>
+<table><thead><tr>
+  <th>Geography</th><th>Fully loaded hourly</th><th>Cost per curriculum hour</th>
+  <th>One avoided rework cycle</th>
+</tr></thead><tbody>{imp_rows}</tbody></table>
+<p>The right hand column is the number this product can actually stand behind. A
+needs analysis that lands on the wrong root cause produces training that addresses
+the wrong behaviour, which is found downstream and fixed by revising it, and the
+report prices a revision from the team's own tracked time rather than from a
+benchmark.</p>
+<p class="dim">Baseline: {imp_baseline} at {imp_ratio} build hours per curriculum
+hour. The report gives a second ratio of 17.47 for brand new builds, which is
+{imp_spread} times larger. They are not contradictory, they answer different
+questions, and a savings figure that does not say which one it used is not a
+savings figure. Rates are general external market benchmarks for the role, which
+the report calls directional rather than an internal cost basis.</p>
+<p><b>What we will not do is multiply that by a rate of misdiagnosis.</b> Nobody has
+measured how often a needs analysis lands on the wrong cause, the supplied package
+does not contain it, and a real cost times a guessed frequency is a large number
+with nothing underneath it. Change the assumption yourself at
+<a href="{base}/api/impact?curriculum_hours=2">/api/impact</a>. The architecture,
+and the state machine the approval gate lives in, are drawn in
+<code>docs/architecture.md</code>.</p>
 </div>
 
 <h2>What we will not claim</h2>

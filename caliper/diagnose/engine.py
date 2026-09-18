@@ -1,9 +1,10 @@
 """Deterministic defect ranking and root cause reasoning.
 
-No model runs in this module. A language model later narrates the object this
-produces into prose, but every count, rate, breadth figure, comparison and
-verdict is computed here. If a judge asks how we know the model did not invent a
-finding, the answer is that the finding exists before any model is called.
+No model runs in this module, and none runs downstream of it either. Every
+count, rate, breadth figure, comparison, verdict and sentence this produces is
+computed or templated here. If a judge asks how we know the model did not invent
+a finding, the answer is that no model is involved in producing one: the only
+model call in the system is the synthetic member in the practice call.
 
 The reasoning the case asks for, in order:
   1. tell a recurring pattern from a one off (frequency and breadth)

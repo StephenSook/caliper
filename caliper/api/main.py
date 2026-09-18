@@ -35,6 +35,7 @@ from caliper.api.auth import (
 from caliper.api.judge import render as render_judge
 from caliper.evaluation import golden
 from caliper.export import rcx_workbook
+from caliper.impact import labor
 from caliper.orchestrator.gate import GateNotSatisfied
 from caliper.orchestrator.run_state import IllegalTransition, RunState, RunStore
 from caliper.voice.sonic_session import SonicSession
@@ -501,6 +502,47 @@ async def practice(ws: WebSocket, run_id: str) -> None:
 def list_runs() -> dict:
     latest = store.latest()
     return {"latest_run_id": latest}
+
+
+@app.get("/api/impact")
+def impact(curriculum_hours: float = 1.0, baseline: str = "weighted_actual") -> dict:
+    """Labor and cost, across the three geographies the case study names.
+
+    Credential free, because the whole point is that a reader can change the
+    assumption and watch the number move rather than take one figure on trust.
+
+    Every constant is transcribed from the sponsor's own labor report and every
+    derived figure is asserted in tests to reproduce a value that report prints.
+    """
+    if baseline not in labor.BASELINES:
+        raise HTTPException(
+            422,
+            f"unknown baseline {baseline!r}. Choose one of: {sorted(labor.BASELINES)}",
+        )
+    if not 0 < curriculum_hours <= 1000:
+        raise HTTPException(422, "curriculum_hours must be greater than 0 and at most 1000")
+
+    result = labor.compare(curriculum_hours, baseline)
+    # The refusal travels with the comparison, because the interesting part of
+    # this deliverable is which figure we decline to state and why.
+    claim = labor.savings_claim(
+        curriculum_hours=curriculum_hours,
+        interventions_per_year=0,
+        misdiagnosis_rate=None,
+        rate_source=None,
+    )
+    result["annual_savings_claim"] = {"licensed": claim.licensed, "reason": claim.reason}
+    result["baselines_available"] = [
+        {
+            "key": b.key,
+            "label": b.label,
+            "hours_per_curriculum_hour": b.hours_per_curriculum_hour,
+            "provenance": b.provenance,
+            "scope": b.scope,
+        }
+        for b in labor.BASELINES.values()
+    ]
+    return result
 
 
 @app.get("/api/golden")
