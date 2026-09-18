@@ -3,6 +3,7 @@ import Lenis from "lenis";
 import { Audit } from "./screens/Audit";
 import { Diagnosis } from "./screens/Diagnosis";
 import { Gate } from "./screens/Gate";
+import { InstrumentField } from "./components/InstrumentField";
 import { Impact } from "./screens/Impact";
 import { Intervention } from "./screens/Intervention";
 import { Practice } from "./screens/Practice";
@@ -201,7 +202,20 @@ export default function App() {
     );
   }
 
+  /*
+    The backdrop's coherence.
+
+    Before a run exists it is 1: a clean lattice, which is what everybody
+    assumes a quality form is. Once the audit has run it becomes the measured
+    reliability, and the grid comes apart by exactly the amount the instrument
+    is unreliable. The act of measuring is what breaks the picture of order.
+  */
+  const fieldCoherence =
+    (run?.audit?.domains?.member_experience?.reliability?.point_estimate as number | undefined) ?? 1;
+
   return (
+    <>
+      <InstrumentField coherence={fieldCoherence} />
     <main className="app">
       <header className="masthead">
         <div className="mh-mark">
@@ -290,5 +304,6 @@ export default function App() {
         </>
       )}
     </main>
+    </>
   );
 }

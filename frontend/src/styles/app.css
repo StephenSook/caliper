@@ -637,3 +637,40 @@ html, body { overflow-x: hidden; max-width: 100%; }
 
 /* The halves move as units, so the transform origin has to be the group. */
 .dg-side-left, .dg-side-right { will-change: transform; }
+
+/* ---------- the instrument field ---------- */
+/*
+  Behind everything, and it must never be able to intercept a click or hold the
+  layout open. Fixed rather than absolute so it does not grow the document, and
+  pointer-events none so it is scenery rather than surface.
+
+  It is deliberately faint. The field carries the finding, but a judge is here to
+  read numbers, and a backdrop that competes with them has failed at its job.
+*/
+.instrument-field {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.5;
+}
+.instrument-field canvas { display: block; width: 100%; height: 100%; }
+
+/* Everything the reader actually uses sits above it. */
+.app { position: relative; z-index: 1; }
+
+/*
+  Says what the backdrop is. Without this line the field is decoration, and a
+  judge has no way to know the background is carrying the finding. With it, the
+  thing they have been looking at for five screens turns out to have been the
+  argument the whole time.
+*/
+.field-note {
+  margin-top: var(--space-5);
+  max-width: 62ch;
+  color: var(--paper-500);
+  font-size: var(--step--1);
+  line-height: 1.7;
+  border-left: 2px solid var(--ink-600);
+  padding-left: var(--space-3);
+}

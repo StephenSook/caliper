@@ -104,6 +104,13 @@ export function Audit({ audit, domain, onDomain }: {
         </div>
       </aside>
 
+      <p className="field-note">
+        The field behind this page is not decoration. It is one point per scored
+        item in the supplied export, laid out as the lattice a working instrument
+        would produce, and displaced by exactly the amount this one is
+        unreliable. It was a clean grid until the audit ran.
+      </p>
+
       <footer className="regen mono">
         Regenerate every figure on this screen: <code>{d.regenerate}</code>
       </footer>
