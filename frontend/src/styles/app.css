@@ -596,3 +596,44 @@ html, body { overflow-x: hidden; max-width: 100%; }
   .impact-controls { flex-direction: column; gap: var(--space-3); }
   .impact-controls input { width: 100%; }
 }
+
+/* ---------- the design graph split ---------- */
+/*
+  The chasm and its label are invisible until the halves come apart. They are
+  opacity 0 rather than absent so GSAP has something to animate and so the
+  layout never reflows mid motion, which would read as a glitch rather than as
+  a separation.
+*/
+.dg-chasm { opacity: 0; }
+.dg-chasm line {
+  stroke: var(--alert);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 7;
+  opacity: 0.75;
+}
+.dg-chasm-label {
+  opacity: 0;
+  fill: var(--alert);
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+.dg-cut {
+  appearance: none;
+  margin-top: var(--space-3);
+  padding: 0.7rem 1rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--alert);
+  background: var(--alert-dim);
+  color: var(--paper-100);
+  font-family: var(--font-body);
+  /* Never below 16px: iOS zooms on focus under that and does not zoom back. */
+  font-size: max(16px, var(--step--1));
+  cursor: pointer;
+  transition: background 0.5s var(--ease), transform 0.5s var(--ease);
+}
+.dg-cut:hover { background: color-mix(in srgb, var(--alert) 26%, transparent); }
+.dg-cut:active { transform: translateY(1px); }
+
+/* The halves move as units, so the transform origin has to be the group. */
+.dg-side-left, .dg-side-right { will-change: transform; }
