@@ -94,3 +94,6 @@ artifacts/
 # .serena/memories, but tooling state rather than product, and not something a
 # public repository needs.
 .serena/
+
+# Playwright MCP session artifacts
+.playwright-mcp/

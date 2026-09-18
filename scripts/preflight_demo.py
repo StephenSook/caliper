@@ -233,40 +233,45 @@ def check_repo() -> None:
 
     # The per SHA check runs API is the verdict. A watch command's exit code is
     # not, and neither is the newest run, which can belong to a different commit.
+    # Read status and conclusion together. Three states have to stay distinct:
+    # green, actually failing, and still running. A run in progress has a null
+    # conclusion, so a bare `conclusion != "success"` filter reports it as
+    # failing, which is a false alarm minutes before a demo. And zero check runs
+    # produces empty output, which reads as green, so the count is floored: that
+    # is the want-1 the want-0 needs.
     out = subprocess.run(
         [
             "gh",
             "api",
             f"repos/{REPO}/commits/{local}/check-runs",
             "--jq",
-            '.check_runs[] | select(.conclusion != "success") | .name',
+            '.check_runs[] | "\\(.status)\\t\\(.conclusion // "")\\t\\(.name)"',
         ],
         capture_output=True,
         text=True,
     )
-    bad = [line for line in out.stdout.strip().splitlines() if line.strip()]
+    runs = [line.split("\t") for line in out.stdout.strip().splitlines() if line.strip()]
+    failing = [name for status, concl, name in runs if status == "completed" and concl != "success"]
+    pending = [name for status, _, name in runs if status != "completed"]
 
-    # A want-0 with no want-1 passes vacuously. Zero check runs produces empty
-    # stdout and exit 0, which read as green, so pushing a fix minutes before
-    # the demo and running this before GitHub registers the workflow would
-    # certify a commit that had never been built. Floor the count.
-    counted = subprocess.run(
-        [
-            "gh",
-            "api",
-            f"repos/{REPO}/commits/{local}/check-runs",
-            "--jq",
-            ".check_runs | length",
-        ],
-        capture_output=True,
-        text=True,
-    )
-    n_runs = int(counted.stdout.strip() or 0) if counted.returncode == 0 else 0
-    check(
-        "CI green on this exact commit",
-        out.returncode == 0 and counted.returncode == 0 and n_runs > 0 and not bad,
-        f"{n_runs} check run(s); failing: {', '.join(bad) or 'none'}",
-    )
+    if out.returncode != 0:
+        check("CI green on this exact commit", False, "could not read the check runs API")
+    elif not runs:
+        check(
+            "CI green on this exact commit",
+            False,
+            "no check runs exist for this commit yet, so nothing has been built",
+        )
+    elif failing:
+        check("CI green on this exact commit", False, f"failing: {', '.join(failing)}")
+    elif pending:
+        check(
+            "CI green on this exact commit",
+            False,
+            f"still running, not yet green: {', '.join(pending)}",
+        )
+    else:
+        check("CI green on this exact commit", True, f"{len(runs)} check run(s) all success")
 
 
 def main() -> int:
