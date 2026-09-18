@@ -116,6 +116,20 @@
         failure that matters, and it is the one a judge would see.
       */
       var KEY = "caliper.backend";
+
+      /*
+        The permanent instance. It is a DEFAULT, not a hardcoded address: it is
+        placed in the field, it can be replaced in ten seconds, and whatever the
+        device last connected to wins over it. That distinction is the whole
+        reason this shell exists, because a binary welded to one hostname cannot
+        be rebuilt at a judging table.
+
+        This host runs the same engine on the de-identified matrix, so it has the
+        audit, the diagnosis, the workbook and the golden cases. The practice
+        call needs a speech model and therefore an instance with credentials, so
+        for that beat the address is changed to whichever host is running one.
+      */
+      var DEFAULT_BACKEND = "https://caliper-77ma.onrender.com";
       var input = document.getElementById("host");
       var button = document.getElementById("go");
       var status = document.getElementById("status");
@@ -141,7 +155,7 @@
         }
       }
 
-      input.value = localStorage.getItem(KEY) || "";
+      input.value = localStorage.getItem(KEY) || DEFAULT_BACKEND;
 
       document.getElementById("form").addEventListener("submit", async function (event) {
         // Without this the form navigates the WebView to a query string and the
