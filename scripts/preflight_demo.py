@@ -1,0 +1,195 @@
+"""One command that answers: is everything a judge will touch working right now.
+
+Run this before the presentation, and again if anything is changed after the
+freeze. It exits non zero if any check fails, so it can be trusted as a gate
+rather than read as a report.
+
+Every check verifies CONTENT rather than a status code, because the failures that
+matter here all return 200: a host serving a stale bundle, a page that renders
+with no findings because its data went missing, a release asset that silently
+changed. A 200 is not evidence that the right thing came back.
+
+    python scripts/preflight_demo.py
+    python scripts/preflight_demo.py --local http://127.0.0.1:8000
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import subprocess
+import sys
+import urllib.error
+import urllib.request
+from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+sys.path.insert(0, str(ROOT))
+
+from caliper.ingest.pii_scan import PATTERNS  # noqa: E402
+
+DEPLOYED = "https://caliper-77ma.onrender.com"
+REPO = "StephenSook/caliper"
+
+# The evidence spine. These are the figures on the slides, in the narration and
+# in the repository, and the whole product is an argument about not asserting a
+# number you cannot regenerate. If a surface disagrees with these, the surface is
+# wrong and this must say so before a judge finds it.
+SPINE = {
+    "member_experience_kr20": 0.4661,
+    "member_experience_ci_low": -0.019,
+    "member_experience_ci_high": 0.776,
+    "linkage_fragility": 2,
+}
+TOLERANCE = 0.0006
+
+failures: list[str] = []
+
+
+def check(name: str, ok: bool, detail: str = "") -> bool:
+    print(f"  {'ok  ' if ok else 'FAIL'}  {name}{('  ' + detail) if detail else ''}")
+    if not ok:
+        failures.append(name)
+    return ok
+
+
+def fetch(url: str, timeout: int = 45) -> tuple[int, bytes]:
+    try:
+        with urllib.request.urlopen(url, timeout=timeout) as r:
+            return r.status, r.read()
+    except urllib.error.HTTPError as e:
+        return e.code, e.read()
+    except Exception as e:  # noqa: BLE001
+        return 0, str(e).encode()
+
+
+def check_instance(label: str, base: str) -> None:
+    print(f"\n{label}  {base}")
+
+    status, body = fetch(base + "/api/health")
+    if not check("health answers", status == 200, f"HTTP {status}"):
+        return
+    health = json.loads(body)
+    check("the host has its observations", health.get("data_dir_present") is True)
+    print(f"        speech_available: {health.get('speech_available')}")
+
+    status, body = fetch(base + "/judge", timeout=60)
+    judge = body.decode(errors="replace")
+    check("judge door answers", status == 200, f"HTTP {status}")
+    # A page can be 200 and empty. Require the finding to be on it.
+    check("judge door carries the finding", "0.466" in judge and "-0.019" in judge)
+    check("judge door is not trivially short", len(judge) > 6000, f"{len(judge):,d} bytes")
+
+    status, body = fetch(base + "/api/evidence", timeout=60)
+    if check("evidence recomputes", status == 200, f"HTTP {status}"):
+        ev = json.dumps(json.loads(body))
+        for key, want in SPINE.items():
+            if isinstance(want, float):
+                near = any(
+                    abs(float(m) - want) < TOLERANCE for m in __import__("re").findall(r"-?\d+\.\d+", ev)
+                )
+                check(f"spine: {key} = {want}", near)
+            else:
+                check(f"spine: {key} = {want}", str(want) in ev)
+
+    status, body = fetch(base + "/api/golden", timeout=90)
+    if check("golden harness answers", status == 200, f"HTTP {status}"):
+        g = json.loads(body)
+        cases = g.get("cases", g.get("results", []))
+        passed = sum(1 for c in cases if c.get("passed") or c.get("status") == "PASS")
+        check("golden cases all pass", cases and passed == len(cases), f"{passed} of {len(cases)}")
+
+    # The interface bundle has to be the CURRENT one, and has to be reachable.
+    import re
+
+    html = fetch(base + "/")[1].decode(errors="replace")
+    m = re.search(r"/assets/index-[A-Za-z0-9_-]+\.js", html)
+    if check("interface bundle is referenced", m is not None):
+        status, js = fetch(base + m.group(0), timeout=60)
+        check("interface bundle is served", status == 200 and len(js) > 100_000, f"{len(js):,d} bytes")
+        check(
+            "no development address in the served bundle",
+            b"127.0.0.1" not in js and b"//localhost" not in js,
+        )
+
+    corpus = judge + html
+    hits = {k: len(p.findall(corpus)) for k, p in PATTERNS if p.findall(corpus)}
+    check("no identifier on any judge facing surface", not hits, str(hits) if hits else "")
+
+
+def check_release() -> None:
+    print("\nPublished Android build")
+    out = subprocess.run(
+        ["gh", "release", "view", "--repo", REPO, "--json", "tagName,assets"],
+        capture_output=True,
+        text=True,
+    )
+    if not check("a release exists", out.returncode == 0, out.stderr.strip()[:80]):
+        return
+    rel = json.loads(out.stdout)
+    assets = rel.get("assets", [])
+    check(
+        "the release carries an apk",
+        any(a["name"].endswith(".apk") for a in assets),
+        f"{rel.get('tagName')}: {[a['name'] for a in assets]}",
+    )
+    for a in assets:
+        if a["name"].endswith(".apk"):
+            check("the apk is a plausible size", a["size"] > 1_000_000, f"{a['size']:,d} bytes")
+
+
+def check_repo() -> None:
+    print("\nRepository")
+    dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
+    check("working tree is clean", not dirty.strip(), f"{len(dirty.splitlines())} changed")
+
+    subprocess.run(["git", "fetch", "--quiet"], capture_output=True)
+    local = subprocess.run(["git", "rev-parse", "HEAD"], capture_output=True, text=True).stdout.strip()
+    remote = subprocess.run(
+        ["git", "rev-parse", "origin/main"], capture_output=True, text=True
+    ).stdout.strip()
+    check("local matches origin/main", local == remote, f"{local[:8]} vs {remote[:8]}")
+
+    # The per SHA check runs API is the verdict. A watch command's exit code is
+    # not, and neither is the newest run, which can belong to a different commit.
+    out = subprocess.run(
+        [
+            "gh",
+            "api",
+            f"repos/{REPO}/commits/{local}/check-runs",
+            "--jq",
+            '.check_runs[] | select(.conclusion != "success") | .name',
+        ],
+        capture_output=True,
+        text=True,
+    )
+    bad = [line for line in out.stdout.strip().splitlines() if line.strip()]
+    check("CI green on this exact commit", out.returncode == 0 and not bad, ", ".join(bad))
+
+
+def main() -> int:
+    ap = argparse.ArgumentParser(description=__doc__)
+    ap.add_argument("--deployed", default=DEPLOYED)
+    ap.add_argument("--local", default=None, help="also check a laptop instance, e.g. the tunnel")
+    ap.add_argument("--skip-repo", action="store_true")
+    a = ap.parse_args()
+
+    check_instance("Deployed instance", a.deployed.rstrip("/"))
+    if a.local:
+        check_instance("Local instance", a.local.rstrip("/"))
+    check_release()
+    if not a.skip_repo:
+        check_repo()
+
+    print()
+    if failures:
+        print(f"{len(failures)} check(s) failed:")
+        for f in failures:
+            print(f"  - {f}")
+        return 1
+    print("everything a judge will touch is answering correctly")
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
