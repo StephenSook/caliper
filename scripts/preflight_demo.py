@@ -100,15 +100,35 @@ def check_instance(label: str, base: str) -> None:
 
     status, body = fetch(base + "/api/evidence", timeout=60)
     if check("evidence recomputes", status == 200, f"HTTP {status}"):
-        ev = json.dumps(json.loads(body))
+        ev_obj = json.loads(body)
+        # Read each value at its own key. The previous version searched the whole
+        # evidence document as one string for ANY number near the target, so it
+        # was never bound to the key it named: member_experience could drift to
+        # anything while business_process still carried the old value somewhere
+        # in the payload, and all four spine checks passed. The integer branch
+        # was worse, a substring test for "2" against a JSON document full of
+        # counts. This is the one guard between the engine and every figure we
+        # say out loud, so it has to fail when the thing it names is wrong.
+        try:
+            actual = {
+                "member_experience_kr20": ev_obj["instruments"]["member_experience"]["kr20"],
+                "member_experience_ci_low": ev_obj["instruments"]["member_experience"]["ci_low"],
+                "member_experience_ci_high": ev_obj["instruments"]["member_experience"]["ci_high"],
+                "linkage_fragility": ev_obj["connectivity"]["linkage_fragility"],
+            }
+        except (KeyError, TypeError) as exc:
+            check(f"spine: evidence has the expected shape ({exc})", False)
+            actual = {}
+
         for key, want in SPINE.items():
+            if key not in actual:
+                continue
+            got = actual[key]
             if isinstance(want, float):
-                near = any(
-                    abs(float(m) - want) < TOLERANCE for m in __import__("re").findall(r"-?\d+\.\d+", ev)
-                )
-                check(f"spine: {key} = {want}", near)
+                ok = isinstance(got, int | float) and abs(float(got) - want) < TOLERANCE
             else:
-                check(f"spine: {key} = {want}", str(want) in ev)
+                ok = got == want
+            check(f"spine: {key} = {want}", ok, f"got {got!r}")
 
     status, body = fetch(base + "/api/golden", timeout=90)
     if check("golden harness answers", status == 200, f"HTTP {status}"):
@@ -225,7 +245,28 @@ def check_repo() -> None:
         text=True,
     )
     bad = [line for line in out.stdout.strip().splitlines() if line.strip()]
-    check("CI green on this exact commit", out.returncode == 0 and not bad, ", ".join(bad))
+
+    # A want-0 with no want-1 passes vacuously. Zero check runs produces empty
+    # stdout and exit 0, which read as green, so pushing a fix minutes before
+    # the demo and running this before GitHub registers the workflow would
+    # certify a commit that had never been built. Floor the count.
+    counted = subprocess.run(
+        [
+            "gh",
+            "api",
+            f"repos/{REPO}/commits/{local}/check-runs",
+            "--jq",
+            ".check_runs | length",
+        ],
+        capture_output=True,
+        text=True,
+    )
+    n_runs = int(counted.stdout.strip() or 0) if counted.returncode == 0 else 0
+    check(
+        "CI green on this exact commit",
+        out.returncode == 0 and counted.returncode == 0 and n_runs > 0 and not bad,
+        f"{n_runs} check run(s); failing: {', '.join(bad) or 'none'}",
+    )
 
 
 def main() -> int:
