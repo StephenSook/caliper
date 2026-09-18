@@ -19,12 +19,18 @@ Ten minutes before, in this order:
 ```
 python scripts/preflight_demo.py --local http://127.0.0.1:8000
 python scripts/smoke_voice.py             # exercises the call itself, no headset needed
+python scripts/reset_demo.py              # clean slate between run throughs
 ```
 
 The first exits 0 or names what is broken, across the deployed instance, the
 laptop, the published binary, every judge facing figure and CI. The second
 synthesises a three turn call through the real socket and tells you whether the
 model answered. Neither needs a person to speak.
+
+The third clears rehearsal runs. **Rehearse as often as you like:** the smoke
+test marks its run as a rehearsal, so the phone will never attach to it and the
+screen on stage cannot end up showing a rehearsal's transcript. Real runs are
+never deleted by that script, because a run a human approved is evidence.
 
 Then:
 

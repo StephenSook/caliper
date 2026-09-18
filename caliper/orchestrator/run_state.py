@@ -130,13 +130,29 @@ class RunStore:
             if "actor_verified" not in cols:
                 conn.execute("ALTER TABLE ledger ADD COLUMN actor_verified INTEGER NOT NULL DEFAULT 0")
 
-    def create(self, run_id: str | None = None) -> str:
+            run_cols = {r["name"] for r in conn.execute("PRAGMA table_info(runs)")}
+            if "rehearsal" not in run_cols:
+                conn.execute("ALTER TABLE runs ADD COLUMN rehearsal INTEGER NOT NULL DEFAULT 0")
+
+    def create(self, run_id: str | None = None, rehearsal: bool = False) -> str:
+        """Start a run. A rehearsal run is real in every way except one.
+
+        It computes the same figures, writes the same ledger and can take the
+        same call. What it does NOT do is become `latest`, which is how the
+        phone handset finds the run to attach to.
+
+        That distinction exists because rehearsing broke the demonstration.
+        Running the voice smoke test wrote its synthesised call into whatever run
+        was most recent, so the screen on stage showed the rehearsal's transcript
+        and score. Marking the rehearsal rather than deleting it keeps the
+        evidence and keeps it out of the way.
+        """
         run_id = run_id or f"RUN-{uuid.uuid4().hex[:8].upper()}"
         now = _now()
         with closing(self._connect()) as conn, conn:
             conn.execute(
-                "INSERT INTO runs (run_id, state, created_at, updated_at) VALUES (?,?,?,?)",
-                (run_id, RunState.INTAKE.value, now, now),
+                "INSERT INTO runs (run_id, state, created_at, updated_at, rehearsal) VALUES (?,?,?,?,?)",
+                (run_id, RunState.INTAKE.value, now, now, 1 if rehearsal else 0),
             )
             conn.execute(
                 "INSERT INTO ledger (run_id, seq, from_state, to_state, at, actor, note, "
@@ -210,7 +226,31 @@ class RunStore:
             for r in rows
         ]
 
-    def latest(self) -> str | None:
+    def latest(self, include_rehearsals: bool = False) -> str | None:
+        """The run a second device should attach to.
+
+        Rehearsals are excluded by default, which is the entire point: the phone
+        must never find the run the voice smoke test just made.
+        """
+        sql = "SELECT run_id FROM runs {where} ORDER BY updated_at DESC LIMIT 1".format(
+            where="" if include_rehearsals else "WHERE rehearsal = 0"
+        )
         with closing(self._connect()) as conn:
-            row = conn.execute("SELECT run_id FROM runs ORDER BY updated_at DESC LIMIT 1").fetchone()
+            row = conn.execute(sql).fetchone()
         return row["run_id"] if row else None
+
+    def is_rehearsal(self, run_id: str) -> bool:
+        with closing(self._connect()) as conn:
+            row = conn.execute("SELECT rehearsal FROM runs WHERE run_id = ?", (run_id,)).fetchone()
+        if row is None:
+            raise KeyError(run_id)
+        return bool(row["rehearsal"])
+
+    def clear_rehearsals(self) -> int:
+        """Remove every rehearsal run and its ledger. Real runs are untouched."""
+        with closing(self._connect()) as conn, conn:
+            ids = [r["run_id"] for r in conn.execute("SELECT run_id FROM runs WHERE rehearsal = 1")]
+            for run_id in ids:
+                conn.execute("DELETE FROM ledger WHERE run_id = ?", (run_id,))
+                conn.execute("DELETE FROM runs WHERE run_id = ?", (run_id,))
+        return len(ids)

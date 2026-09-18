@@ -271,17 +271,24 @@ def evidence() -> dict:
     }
 
 
+class RunRequest(BaseModel):
+    # A rehearsal run computes everything a real one does and never becomes the
+    # run the phone attaches to. Rehearsing used to overwrite the demonstration.
+    rehearsal: bool = False
+
+
 @app.post("/api/runs")
-def create_run(authorization: str | None = Header(default=None)) -> dict:
-    resolve_operator("run starter", authorization)
+def create_run(body: RunRequest | None = None, authorization: str | None = Header(default=None)) -> dict:
     """Screens one to three in one call: intake, audit, diagnosis, stop at gate."""
+    resolve_operator("run starter", authorization)
     try:
-        result = pipeline.start(DATA_DIR, store=store)
+        result = pipeline.start(DATA_DIR, store=store, rehearsal=bool(body and body.rehearsal))
     except FileNotFoundError as exc:
         raise HTTPException(404, str(exc)) from exc
     return {
         "run_id": result.run_id,
         "state": result.state,
+        "rehearsal": bool(body and body.rehearsal),
         "redactions": result.redactions,
         "audit": result.audit,
         "diagnosis": result.diagnosis,

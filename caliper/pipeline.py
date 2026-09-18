@@ -37,11 +37,18 @@ class RunResult:
 
 
 def start(
-    data_dir: str | Path = "data/raw", store: RunStore | None = None, run_id: str | None = None
+    data_dir: str | Path = "data/raw",
+    store: RunStore | None = None,
+    run_id: str | None = None,
+    rehearsal: bool = False,
 ) -> RunResult:
-    """Intake, instrument audit, and diagnosis. Stops at the gate."""
+    """Intake, instrument audit, and diagnosis. Stops at the gate.
+
+    A rehearsal run is identical in every way except that it never becomes the
+    run a second device attaches to. See RunStore.create.
+    """
     store = store or RunStore()
-    run_id = run_id or store.create()
+    run_id = run_id or store.create(rehearsal=rehearsal)
 
     observations, redactions, _ = load_all(data_dir)
     audit = audit_all(observations, redactions)

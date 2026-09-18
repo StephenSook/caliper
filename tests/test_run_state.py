@@ -155,3 +155,54 @@ def test_the_ledger_records_every_transition_in_order(store):
 def test_an_unknown_run_is_an_error_not_an_empty_result(store):
     with pytest.raises(KeyError):
         store.state("RUN-DOES-NOT-EXIST")
+
+
+# --------------------------------------------------------------------------
+# Rehearsal runs.
+
+
+def test_a_rehearsal_run_never_becomes_the_one_a_second_device_finds(store):
+    """This is the entire point, and it is a demonstration bug, not a nicety.
+
+    The voice smoke test creates a run. Before this existed that run was both
+    fresh and most recent, so the phone handset attached to it and the screen on
+    stage showed the rehearsal's transcript and its score instead of the call
+    that was actually happening.
+    """
+    real = store.create()
+    rehearsal = store.create(rehearsal=True)
+
+    assert store.latest() == real, "the phone must not find the rehearsal"
+    assert store.latest(include_rehearsals=True) == rehearsal
+    assert store.is_rehearsal(rehearsal) is True
+    assert store.is_rehearsal(real) is False
+
+
+def test_a_rehearsal_is_a_real_run_in_every_other_way(store):
+    """Marking it rather than special casing it. It computes the same figures,
+    writes the same ledger and can take the same call; it is simply not the run
+    a second device attaches to."""
+    rehearsal = store.create(rehearsal=True)
+    store.transition(rehearsal, RunState.INSTRUMENT_AUDITED, note="audited")
+    assert store.state(rehearsal) is RunState.INSTRUMENT_AUDITED
+    assert len(store.ledger(rehearsal)) == 2
+
+
+def test_clearing_rehearsals_leaves_real_runs_alone(store):
+    """A run a human approved is evidence, and evidence does not get deleted to
+    tidy up between rehearsals."""
+    real = store.create()
+    store.create(rehearsal=True)
+    store.create(rehearsal=True)
+
+    assert store.clear_rehearsals() == 2
+    assert store.latest() == real
+    assert store.latest(include_rehearsals=True) == real
+    assert store.state(real) is RunState.INTAKE
+
+
+def test_an_unknown_run_raises_rather_than_reporting_false(store):
+    """is_rehearsal returning False for a run that does not exist would let a
+    caller treat a missing run as a real one."""
+    with pytest.raises(KeyError):
+        store.is_rehearsal("RUN-NOPE")

@@ -123,12 +123,15 @@ async def run(base: str, turns: list[tuple[str, str]], quiet_seconds: float) -> 
     # certainty rather than a risk.
     req = urllib.request.Request(
         http + "/api/runs",
-        data=b"{}",
+        # rehearsal, so this run never becomes the one the phone attaches to.
+        # A fresh run alone was not enough: it was fresh AND most recent, so the
+        # handset found it anyway and the stage screen showed the rehearsal.
+        data=b'{"rehearsal": true}',
         headers={"Content-Type": "application/json"},
         method="POST",
     )
     run_id = json.loads(urllib.request.urlopen(req, timeout=240).read())["run_id"]
-    print(f"  run            {run_id}  (fresh, so the demonstrated run is untouched)")
+    print(f"  run            {run_id}  (rehearsal, so the phone will not attach to it)")
 
     print(f"  script         {len(turns)} turn(s)")
 
