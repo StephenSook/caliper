@@ -71,7 +71,25 @@ def check_instance(label: str, base: str) -> None:
         return
     health = json.loads(body)
     check("the host has its observations", health.get("data_dir_present") is True)
-    print(f"        speech_available: {health.get('speech_available')}")
+
+    # Whether a call can happen, and on which account.
+    #
+    # This is here because the failure it catches broke the centerpiece and was
+    # completely silent: the voice layer resolved a default AWS profile whose
+    # session had expired, the socket opened, the timer ran, and the model never
+    # answered. A public host is EXPECTED to report false, so it is reported
+    # rather than asserted; what is asserted is that the host has an opinion and
+    # can explain it.
+    speech = health.get("speech") or {}
+    check(
+        "the host reports whether it can take a call",
+        bool(speech.get("reason")),
+        f"profile={speech.get('profile')} account={speech.get('account')}",
+    )
+    print(
+        f"        speech: {'available' if health.get('speech_available') else 'NOT available'}"
+        f"  {speech.get('reason', '')[:90]}"
+    )
 
     status, body = fetch(base + "/judge", timeout=60)
     judge = body.decode(errors="replace")
@@ -138,6 +156,28 @@ def check_release() -> None:
             check("the apk is a plausible size", a["size"] > 1_000_000, f"{a['size']:,d} bytes")
 
 
+def check_local_voice(base: str) -> None:
+    """The laptop instance is the one that has to take a live call."""
+    print(f"\nVoice, on the instance that will demonstrate it  {base}")
+    status, body = fetch(base.rstrip("/") + "/api/health")
+    if not check("health answers", status == 200, f"HTTP {status}"):
+        return
+    health = json.loads(body)
+    speech = health.get("speech") or {}
+    ok = check(
+        "this instance can take a live call",
+        health.get("speech_available") is True,
+        speech.get("reason", "")[:120],
+    )
+    if ok:
+        check(
+            "credentials belong to an account",
+            bool(speech.get("account")),
+            f"profile={speech.get('profile')} account={speech.get('account')}",
+        )
+        print("        run `python scripts/smoke_voice.py` to exercise the call itself")
+
+
 def check_repo() -> None:
     print("\nRepository")
     dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -177,6 +217,7 @@ def main() -> int:
     check_instance("Deployed instance", a.deployed.rstrip("/"))
     if a.local:
         check_instance("Local instance", a.local.rstrip("/"))
+        check_local_voice(a.local)
     check_release()
     if not a.skip_repo:
         check_repo()
