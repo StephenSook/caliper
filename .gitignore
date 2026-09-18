@@ -89,3 +89,8 @@ keystore.properties
 # case package rendered on screen, which does not belong in a public repository
 # however de-identified the interface is.
 artifacts/
+
+# Serena's project memories. Useful locally and findable in Finder at
+# .serena/memories, but tooling state rather than product, and not something a
+# public repository needs.
+.serena/
