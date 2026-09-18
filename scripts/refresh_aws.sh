@@ -25,9 +25,27 @@ if [ -z "$BLOCK" ]; then
   exit 1
 fi
 
-KEY=$(printf '%s\n' "$BLOCK" | sed -nE 's/.*aws_access_key_id[[:space:]]*=[[:space:]]*([A-Za-z0-9/+=]+).*/\1/p' | head -1)
-SECRET=$(printf '%s\n' "$BLOCK" | sed -nE 's/.*aws_secret_access_key[[:space:]]*=[[:space:]]*([A-Za-z0-9/+=]+).*/\1/p' | head -1)
-TOKEN=$(printf '%s\n' "$BLOCK" | sed -nE 's/.*aws_session_token[[:space:]]*=[[:space:]]*([A-Za-z0-9/+=]+).*/\1/p' | head -1)
+# Workshop Studio offers the block in several shapes depending on the tab you
+# copied from. The bash tab gives `export AWS_ACCESS_KEY_ID="ASIA..."`, the ini
+# shape is `aws_access_key_id = ASIA...`. Accept both, case insensitively, and
+# strip surrounding quotes, rather than silently parsing nothing and reporting
+# zero-length values as a bad paste.
+#
+# Split on the FIRST = only. A session token is base64 and ends in = padding,
+# so a greedy .*= matches through that padding and leaves an empty string,
+# which then reports as a bad paste while the clipboard was perfectly good.
+# The key and secret hid the bug because neither contains an = sign.
+field() {
+  printf '%s\n' "$BLOCK" \
+    | tr -d '\r' \
+    | grep -iE "(^|[^A-Za-z_])$1[[:space:]]*=" \
+    | head -1 \
+    | sed -E "s/^[^=]*=[[:space:]]*//; s/^[\"']//; s/[\"'][[:space:]]*;?[[:space:]]*$//" \
+    | tr -d '[:space:]'
+}
+KEY=$(field "aws_access_key_id")
+SECRET=$(field "aws_secret_access_key")
+TOKEN=$(field "aws_session_token")
 
 # Report only lengths. A credential that reaches a terminal is a credential in
 # scrollback, and this one is pasted by hand under time pressure.
