@@ -141,6 +141,7 @@ if __name__ == "__main__":
     import argparse
     import json
     import os
+    import sys
 
     from caliper.ingest.normalize import load_all
 
@@ -152,6 +153,32 @@ if __name__ == "__main__":
     parser.add_argument("--domain", default=None)
     args = parser.parse_args()
 
-    obs, red, _ = load_all(args.data_dir)
+    # The case package is competition confidential and deliberately absent from
+    # this repository, so this is the FIRST thing a stranger who clones the repo
+    # and follows the README hits. An unhandled traceback there reads as broken
+    # software rather than as a missing input, and it prints the supplied
+    # export's filename, which names the client relationship, to their terminal.
+    try:
+        obs, red, _ = load_all(args.data_dir)
+    except FileNotFoundError:
+        print(
+            "No case package found.\n"
+            "\n"
+            "This repository ships the engine, not the data. The supplied export is\n"
+            "competition confidential and is deliberately not committed, so this\n"
+            "command has nothing to audit until you point it at a copy.\n"
+            "\n"
+            "To reproduce the figures:\n"
+            "  1. Open https://caliper-77ma.onrender.com. It runs this same engine on a\n"
+            "     de-identified matrix and recomputes on request. No install, no key.\n"
+            "  2. Or set CALIPER_DATA_DIR to a directory holding the export, then re-run.\n"
+            f"     Looked in: {args.data_dir}\n"
+            "\n"
+            "The engine itself is covered without the package: run pytest, which\n"
+            "exercises every statistic against hand computed fixtures.",
+            file=sys.stderr,
+        )
+        raise SystemExit(2) from None
+
     result = audit_domain(obs, args.domain) if args.domain else audit_all(obs, red)
     print(json.dumps(result, indent=2, default=str))
