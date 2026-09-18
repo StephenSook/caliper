@@ -208,6 +208,21 @@ Running locally, because CI has neither half of what they compare:
   launcher at iPhone geometry in WebKit, which is the engine WKWebView actually
   runs, and asserts no horizontal overflow and no field below the 16px threshold
   that zooms iOS permanently.
+- `scripts/check_claims.py` regenerates every judge facing figure from the engine
+  and reads every surface a judge can read, asserting each figure is PRESENT and,
+  more importantly, that no contradictory value of the same kind sits beside it.
+  Presence alone would have passed while the retired 0.5048 sat in a paragraph
+  next to the corrected 0.4661, which is the exact drift that started this
+  project. A figure quoted deliberately because it is wrong, as the run of show
+  does when correcting that number out loud, is listed as a named exception with
+  its reason rather than tolerated by a looser pattern.
+- `scripts/smoke_voice.py` synthesises a three turn call and sends it through the
+  shipped WebSocket, asserting a ready event, a transcript and returned audio.
+  Checking the call used to require a person and a headset, which is why it did
+  not get checked.
+
+`scripts/preflight_demo.py` runs the judge facing ones together and exits non
+zero, so it is a gate rather than a report.
 
 `tests/test_deidentified.py` is the CI half of that split: it exercises the same
 code paths on a synthetic matrix so the loader and the parity logic are covered

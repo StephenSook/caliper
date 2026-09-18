@@ -178,6 +178,27 @@ def check_local_voice(base: str) -> None:
         print("        run `python scripts/smoke_voice.py` to exercise the call itself")
 
 
+def check_claims() -> None:
+    """Prose drifts from code silently and in one direction.
+
+    A figure gets corrected in the engine and the paragraph quoting it does not.
+    Nothing goes red, and the first person to notice is a judge reading a README
+    beside a screen that disagrees with it.
+    """
+    print("\nJudge facing figures against the engine")
+    out = subprocess.run(
+        [sys.executable, str(ROOT / "scripts" / "check_claims.py")],
+        capture_output=True,
+        text=True,
+        cwd=str(ROOT),
+    )
+    ok = check("every claimed figure matches what the code regenerates", out.returncode == 0)
+    if not ok:
+        for line in out.stdout.splitlines():
+            if "FAIL" in line or "also states" in line:
+                print(f"        {line.strip()}")
+
+
 def check_repo() -> None:
     print("\nRepository")
     dirty = subprocess.run(["git", "status", "--porcelain"], capture_output=True, text=True).stdout
@@ -219,6 +240,7 @@ def main() -> int:
         check_instance("Local instance", a.local.rstrip("/"))
         check_local_voice(a.local)
     check_release()
+    check_claims()
     if not a.skip_repo:
         check_repo()
 
