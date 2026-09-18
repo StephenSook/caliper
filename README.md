@@ -91,6 +91,13 @@ model call in the entire system and it is a synthetic member speaking.
 
 ---
 
+## The presentation
+
+[docs/run-of-show.md](docs/run-of-show.md) is the fifteen minutes, beat by beat,
+with owners, timings, the questions that will be asked and the answers, and what
+to do when something breaks. It exists because a live demo that runs long gets
+cut off mid sentence, and because nobody can rehearse from a blank page.
+
 ## Architecture and where a human decides
 
 [docs/architecture.md](docs/architecture.md) has both diagrams: the agent, and
