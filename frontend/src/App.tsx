@@ -46,23 +46,56 @@ export default function App() {
   useEffect(() => {
     if (!handset || handsetRun) return;
     let cancelled = false;
-    api
-      .latestRun()
-      .then((r) => {
-        if (cancelled) return;
-        if (r.latest_run_id) setHandsetRun(r.latest_run_id);
-        else
-          setHandsetError(
-            "No run has been started on this host yet. Run the audit on the main screen first, then reopen this page.",
-          );
-      })
-      .catch((e) => {
-        if (!cancelled) setHandsetError(String(e));
-      });
+    let timer = 0;
+
+    /*
+      Keep looking rather than failing once.
+
+      The intended shape of the demo is two devices on one run: the laptop runs
+      the audit and a human approves the diagnosis, and the phone is the handset
+      that takes the drill. So the phone polls, and the moment a run exists on
+      this host it attaches to it with nobody touching the phone. An empty state
+      that needs a reload is an empty state somebody is looking at when it
+      matters.
+    */
+    const look = () => {
+      api
+        .latestRun()
+        .then((r) => {
+          if (cancelled) return;
+          if (r.latest_run_id) {
+            setHandsetRun(r.latest_run_id);
+            return;
+          }
+          setHandsetError("");
+          timer = window.setTimeout(look, 3000);
+        })
+        .catch((e) => {
+          if (cancelled) return;
+          setHandsetError(String(e));
+          timer = window.setTimeout(look, 5000);
+        });
+    };
+    look();
+
     return () => {
       cancelled = true;
+      if (timer) window.clearTimeout(timer);
     };
   }, [handset, handsetRun]);
+
+  const startFromHandset = useCallback(async () => {
+    setBusy(true);
+    setHandsetError(null);
+    try {
+      const r = await api.createRun();
+      setHandsetRun(r.run_id);
+    } catch (e) {
+      setHandsetError(String(e));
+    } finally {
+      setBusy(false);
+    }
+  }, []);
 
   useEffect(() => {
     if (still) return;
@@ -147,14 +180,20 @@ export default function App() {
           <Practice runId={handsetRun} />
         ) : (
           <section className="screen">
+            <span className="eyebrow">waiting for a run</span>
             <p className="lede">
-              {handsetError ?? "Finding the run this host is working on."}
+              This phone is the handset. It takes the drill on whatever run this
+              host is working on, so the laptop and the phone are one run, one
+              instrument and one audit trail.
             </p>
-            {handsetError && (
-              <p className="intake-note mono">
-                <a href="/">Open the main screen</a>
-              </p>
-            )}
+            <p className="intake-note">
+              Nothing to do here. Start the audit on the laptop and this screen
+              picks it up on its own, usually within a few seconds.
+            </p>
+            <button className="cta" onClick={startFromHandset} disabled={busy}>
+              {busy ? "Auditing the instrument" : "Or start the audit from this phone"}
+            </button>
+            {handsetError ? <p className="error">{handsetError}</p> : null}
           </section>
         )}
       </main>

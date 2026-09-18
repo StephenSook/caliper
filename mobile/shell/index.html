@@ -8,6 +8,7 @@
     <style>
       :root {
         --ink-900: #0a0b0d;
+        --ink-800: #16191f;
         --ink-700: #1e222a;
         --paper-100: #f7f7f5;
         --paper-500: #7c7f87;
@@ -22,13 +23,8 @@
         body is a column flex container, so every child is a flex item, and a
         flex item defaults to min-width:auto: it refuses to shrink below its own
         intrinsic content width. A text input holding a long URL has a large
-        intrinsic width, so the field pushed the document wider than the screen
-        and the whole page panned sideways the moment the field was focused. It
-        stayed panned after the keyboard closed.
-
-        None of that is visible on a desktop browser, where the viewport is wider
-        than any URL. It was found by typing a real address into the app running
-        on a phone and looking at the result.
+        intrinsic width, so without this the field pushed the document wider than
+        the screen and the page panned sideways.
       */
       html, body { overflow-x: hidden; max-width: 100%; }
       body > *, form > * { min-width: 0; max-width: 100%; }
@@ -51,12 +47,11 @@
               text-transform: uppercase; color: var(--paper-500); margin-bottom: 8px; }
       input {
         width: 100%; min-width: 0; padding: 14px; border-radius: 10px;
-        /* A long value scrolls inside the field rather than stretching it. */
-        text-overflow: ellipsis;
         border: 1px solid var(--ink-700); background: #101216;
-        color: var(--paper-100);
-        /* 16px minimum: iOS zooms the page on focus below that and never
-           zooms back, which panned the whole launcher sideways. */
+        color: var(--paper-100); text-overflow: ellipsis;
+        /* 16px minimum: iOS zooms the page on focus below that and never zooms
+           back, which pans the whole launcher sideways for the rest of the
+           session. */
         font: 16px ui-monospace, Menlo, monospace;
       }
       input:focus { outline: none; border-color: var(--signal); }
@@ -66,18 +61,34 @@
         font-size: 1rem; font-weight: 600;
         transition: opacity 0.4s var(--ease);
       }
+      button.secondary {
+        background: transparent; color: var(--paper-500);
+        border: 1px solid var(--ink-700); font-weight: 500;
+      }
       button:disabled { opacity: 0.45; }
       .status { margin-top: 18px; font-size: 0.85rem; min-height: 3em; color: var(--paper-500); }
       .status.bad { color: var(--alert); }
       .status.good { color: var(--signal); }
+      .target { font: 14px ui-monospace, Menlo, monospace; color: var(--paper-100);
+                background: var(--ink-800); border: 1px solid var(--ink-700);
+                border-radius: 10px; padding: 14px; word-break: break-all; }
       .note { margin-top: 28px; font-size: 0.72rem; color: var(--paper-500); line-height: 1.6; }
+      [hidden] { display: none !important; }
     </style>
   </head>
   <body>
     <h1>CALIPER</h1>
     <p class="tag">Practice call handset</p>
 
-    <form id="form">
+    <!-- The common case: an address that already works. -->
+    <section id="auto">
+      <label>Connecting to</label>
+      <p class="target" id="target"></p>
+      <button class="secondary" id="change" type="button">Use a different address</button>
+    </section>
+
+    <!-- Shown only when the address is wrong, unreachable, or the person asks. -->
+    <form id="form" hidden>
       <label for="host">Backend address</label>
       <input
         id="host"
@@ -87,55 +98,62 @@
         autocapitalize="off"
         autocorrect="off"
         spellcheck="false"
-        placeholder="https://something.trycloudflare.com"
+        placeholder="https://something.example.com"
       />
       <button id="go" type="submit">Connect</button>
     </form>
+
     <p class="status" id="status"></p>
 
     <p class="note">
       This shell holds no product logic and no data. It reaches the same origin
       the laptop and the judges' phones reach, so there is one backend, one
       version and one audit trail. The address is stored on this device and can
-      be changed at any time, which is what keeps the app working when the
-      tunnel is restarted.
+      be changed at any time, which is what keeps the app working when a
+      development tunnel is restarted.
     </p>
 
     <script>
       /*
         The launcher.
 
-        A native shell that hardcodes its backend URL at build time is a time
-        bomb: a development tunnel gets a new hostname every restart, and the
-        binary on the phone cannot be rebuilt at a judging table. So the address
-        lives in device storage, is editable in ten seconds, and is verified
-        before we navigate anywhere.
+        It opens against an address that already works and gets out of the way.
+        A native shell that hardcodes its backend is a time bomb, because a
+        development tunnel gets a new hostname on every restart and the binary on
+        the phone cannot be rebuilt at a judging table, so the address here is a
+        DEFAULT rather than a constant: whatever the device last connected to
+        wins over it, and one button replaces it in ten seconds.
 
-        Verification is a real request to a real endpoint, not a guess from the
+        Auto connecting is also the honest reading of what this screen is for.
+        Nobody wants to look at a settings page. They want the call.
+
+        Verification is a real request to a real endpoint, never a guess from the
         shape of the string. An address that parses and does not answer is the
         failure that matters, and it is the one a judge would see.
       */
       var KEY = "caliper.backend";
 
-      /*
-        The permanent instance. It is a DEFAULT, not a hardcoded address: it is
-        placed in the field, it can be replaced in ten seconds, and whatever the
-        device last connected to wins over it. That distinction is the whole
-        reason this shell exists, because a binary welded to one hostname cannot
-        be rebuilt at a judging table.
-
-        This host runs the same engine on the de-identified matrix, so it has the
-        audit, the diagnosis, the workbook and the golden cases. The practice
-        call needs a speech model and therefore an instance with credentials, so
-        for that beat the address is changed to whichever host is running one.
-      */
+      // The permanent instance. It runs the same engine on the de-identified
+      // matrix, so it carries the audit, the diagnosis, the workbook and the
+      // golden cases. The practice call needs a speech model and therefore an
+      // instance holding credentials, so for that beat this is pointed at
+      // whichever host is running one.
       var DEFAULT_BACKEND = "https://caliper-77ma.onrender.com";
-      var input = document.getElementById("host");
-      var button = document.getElementById("go");
-      var status = document.getElementById("status");
+
+      // Long enough to read the address and reach the button, short enough that
+      // nobody on stage is waiting for a countdown.
+      var AUTO_CONNECT_MS = 2500;
+
+      var el = function (id) { return document.getElementById(id); };
+      var autoSection = el("auto");
+      var form = el("form");
+      var input = el("host");
+      var status = el("status");
+      var target = el("target");
+      var timer = null;
 
       function say(message, kind) {
-        status.textContent = message;
+        status.textContent = message || "";
         status.className = "status" + (kind ? " " + kind : "");
       }
 
@@ -155,9 +173,36 @@
         }
       }
 
-      input.value = localStorage.getItem(KEY) || DEFAULT_BACKEND;
+      function showForm(message, kind) {
+        if (timer) { clearTimeout(timer); timer = null; }
+        autoSection.hidden = true;
+        form.hidden = false;
+        say(message, kind);
+      }
 
-      document.getElementById("form").addEventListener("submit", async function (event) {
+      async function connect(origin) {
+        say("Checking " + origin);
+        try {
+          // /api/health is unauthenticated and returns no case data, so this
+          // probe is safe to make before anyone has approved anything.
+          var response = await fetch(origin + "/api/health", { cache: "no-store" });
+          if (!response.ok) throw new Error("the host answered " + response.status);
+          await response.json();
+        } catch (error) {
+          showForm(
+            "Could not reach " + origin + ": " + error.message +
+              ". Check the address, the tunnel, and that this device has a network.",
+            "bad"
+          );
+          return false;
+        }
+        localStorage.setItem(KEY, origin);
+        say("Connected. Opening the practice call.", "good");
+        location.replace(origin + "/practice?source=native");
+        return true;
+      }
+
+      form.addEventListener("submit", async function (event) {
         // Without this the form navigates the WebView to a query string and the
         // app appears to reset itself.
         event.preventDefault();
@@ -166,37 +211,37 @@
           say("That is not an https address. The microphone needs a secure context.", "bad");
           return;
         }
-
+        var button = el("go");
         button.disabled = true;
-        say("Checking " + origin);
-
-        try {
-          // /api/health is unauthenticated and returns no case data, so this
-          // probe is safe to make before anyone has approved anything.
-          var response = await fetch(origin + "/api/health", { cache: "no-store" });
-          if (!response.ok) throw new Error("the host answered " + response.status);
-          await response.json();
-        } catch (error) {
-          button.disabled = false;
-          say(
-            "Could not reach that address: " + error.message +
-              ". Check the tunnel is running and the phone has a network.",
-            "bad"
-          );
-          return;
-        }
-
-        localStorage.setItem(KEY, origin);
-        say("Connected. Opening the practice call.", "good");
-        location.replace(origin + "/practice?source=native");
+        var ok = await connect(origin);
+        if (!ok) button.disabled = false;
       });
 
-      // A returning user who already connected once goes straight through, so
-      // the shell is invisible after the first launch.
-      var saved = localStorage.getItem(KEY);
-      if (saved) {
-        say("Reconnecting to " + saved);
-        document.getElementById("form").requestSubmit();
+      el("change").addEventListener("click", function () {
+        showForm("");
+        input.focus();
+      });
+
+      // Boot. Saved address first, the default second.
+      var saved = null;
+      try {
+        saved = localStorage.getItem(KEY);
+      } catch (e) {
+        // Private browsing and some WebView configurations refuse storage. The
+        // default still works; only the memory of a manual change is lost.
+        saved = null;
+      }
+      var initial = normalise(saved) || normalise(DEFAULT_BACKEND);
+
+      if (initial) {
+        target.textContent = initial;
+        input.value = initial;
+        timer = setTimeout(function () {
+          timer = null;
+          connect(initial);
+        }, AUTO_CONNECT_MS);
+      } else {
+        showForm("");
       }
     </script>
   </body>
