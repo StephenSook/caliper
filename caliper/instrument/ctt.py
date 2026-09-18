@@ -103,7 +103,7 @@ def kr20(item_matrix: np.ndarray) -> float:
 def feldt_ci(alpha_hat: float, n: int, k: int, level: float = 0.95) -> tuple[float, float]:
     """Feldt (1965) confidence interval for coefficient alpha / KR-20.
 
-    Feldt showed (1 - alpha_hat) / (1 - alpha) follows F with
+    Feldt showed (1 - alpha) / (1 - alpha_hat) follows F with
     df1 = n - 1 and df2 = (n - 1)(k - 1). Inverting gives an exact two sided
     interval, which is the standard method at small n.
 

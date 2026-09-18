@@ -114,17 +114,21 @@ async def run(base: str, turns: list[tuple[str, str]], quiet_seconds: float) -> 
         print(f"  FAIL  this host cannot take a call: {speech.get('reason')}")
         return 1
 
-    runs = json.loads(urllib.request.urlopen(http + "/api/runs", timeout=20).read())
-    run_id = runs.get("latest_run_id")
-    if not run_id:
-        req = urllib.request.Request(
-            http + "/api/runs",
-            data=b"{}",
-            headers={"Content-Type": "application/json"},
-            method="POST",
-        )
-        run_id = json.loads(urllib.request.urlopen(req, timeout=180).read())["run_id"]
-    print(f"  run            {run_id}")
+    # Always a FRESH run, never the latest one.
+    #
+    # Attaching to latest_run_id meant rehearsing wrote the synthesised call's
+    # score into the very run about to be demonstrated, stamped the ledger with
+    # this script as the actor, and left the screen showing the rehearsal's
+    # result. Inviting anyone to run this as often as they like made that a
+    # certainty rather than a risk.
+    req = urllib.request.Request(
+        http + "/api/runs",
+        data=b"{}",
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+    run_id = json.loads(urllib.request.urlopen(req, timeout=240).read())["run_id"]
+    print(f"  run            {run_id}  (fresh, so the demonstrated run is untouched)")
 
     print(f"  script         {len(turns)} turn(s)")
 

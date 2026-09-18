@@ -11,7 +11,9 @@ Design notes, each of which is a defect this would otherwise have:
 * It asserts on the set git would ACTUALLY stage, not on a glob of the working
   directory, because those two differ precisely when a pattern has stopped
   matching.
-* It floors the number of files inspected. A scan that walks nothing reports
+* It floors BOTH the number of files listed and the number actually read,
+  because those are different quantities and only one of them used to be
+  defended. A scan that walks nothing reports
   "clean" in the same words as one that walks everything.
 * It checks file CONTENT for supplied personnel labels as well as filenames,
   because a screenshot or a fixture can carry the data without carrying the name.
@@ -25,6 +27,9 @@ import sys
 from pathlib import Path
 
 MIN_TRACKED_FILES = 10
+
+# The content half needs its own floor, on what was actually opened and read.
+MIN_TEXT_FILES = 30
 
 # Filenames that must never be staged, matched case insensitively.
 FORBIDDEN_NAMES = [
@@ -117,6 +122,18 @@ def main() -> int:
 
     if len(files) < MIN_TRACKED_FILES:
         print(f"FAIL: only {len(files)} files visible to the guard; it proved nothing")
+        return 2
+
+    # The floor above is on the file LIST. The content scan is a separate thing
+    # and had no floor at all, so if the suffix set stopped matching, or every
+    # read raised, this printed "0 text files inspected" beside the word clean
+    # and exited 0. Two numbers on one line, only one of them defended.
+    if inspected < MIN_TEXT_FILES:
+        print(
+            f"FAIL: {len(files)} files listed but only {inspected} were READ. "
+            "The content scan examined almost nothing, which reports clean in "
+            "exactly the same words as a scan that examined everything."
+        )
         return 2
 
     if problems:

@@ -105,6 +105,33 @@ def record_decision(
         merge=merge,
         actor_verified=actor_verified,
     )
+
+    # Requesting more evidence has to leave the gate OPEN.
+    #
+    # It moved the run to DIAGNOSED and nothing ever reopened the gate, because
+    # open_gate is only called once, from pipeline.start. So the fourth button on
+    # the approval screen permanently stranded the run: every later decision and
+    # the generate call all raised GateNotSatisfied, and the interface had
+    # already hidden the buttons. A judge pressing it mid demonstration had no
+    # way forward but a full re audit.
+    #
+    # It also made two judge facing statements false. The architecture diagram
+    # draws a self loop on AWAITING_APPROVAL for this action, and the docs say
+    # "the gate stays shut", when in fact it closed and could not be reopened.
+    #
+    # Reopening here makes the drawn behaviour the real behaviour. The ledger
+    # keeps both steps, so the request and the reopening are both visible rather
+    # than one silently undoing the other.
+    if target is RunState.DIAGNOSED:
+        store.transition(
+            run_id,
+            RunState.AWAITING_APPROVAL,
+            actor=actor,
+            note="gate reopened pending further evidence",
+            actor_verified=actor_verified,
+        )
+        return RunState.AWAITING_APPROVAL
+
     return target
 
 

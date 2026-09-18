@@ -6,10 +6,10 @@ scripting disabled, and a defect in the interface bundle cannot take it down.
 The render timestamp below is deliberately NOT in ISO form. A date of service is
 one of the identifiers we scan for, so an ISO timestamp of our own would collide
 with the thing the scanner hunts and every clean page would carry a false alarm.
-Written this way, any ISO date appearing on this page IS a leak. It loads instantly, it works with scripting
-disabled, and a defect in the interface bundle cannot take it down. Rigor a judge
-cannot reach scores as absent, so the evidence has to be readable without logging
-in, without a key, and without running anything.
+Written this way, any ISO date appearing on this page IS a leak.
+
+Rigor a judge cannot reach scores as absent, so the evidence has to be readable
+without logging in, without a key, and without running anything.
 
 Every number on this page is recomputed from the supplied export when the page is
 requested. It is not a cached artifact and it is not a screenshot.
@@ -82,6 +82,14 @@ def render(evidence: dict, golden: dict, base: str = "") -> str:
         f"<td><b>${r['rework_cycle_cost']:,.2f}</b></td></tr>"
         for r in imp["rows"]
     )
+    # These two were typed into the prose beside the table that computes them,
+    # which is the one place on this page where a number was not regenerated.
+    # Both were correct, and being correct today is exactly how a hardcoded
+    # figure survives long enough to become wrong.
+    n_evals = inst["member_experience"]["n_evaluations"]
+    co_dead = inst["compliance"]["items_zero_variance"]
+    co_items = inst["compliance"]["n_items"]
+
     imp_baseline = e(imp["baseline"]["label"])
     imp_ratio = imp["baseline"]["hours_per_curriculum_hour"]
     imp_spread = imp["baseline_choice_matters"]["ratio"]
@@ -127,10 +135,10 @@ one thing, read the box below.</p>
 <ol class="itin">
   <li><b>Look at the reliability column below.</b>
       <span>Every one of the three quality forms has a confidence interval whose lower
-      bound sits at or below zero. With seventeen evaluations you cannot establish
+      bound sits at or below zero. With {n_evals} evaluations you cannot establish
       that any of them measures anything.</span></li>
   <li><b>Look at the zero variance column.</b>
-      <span>On the Compliance form, seven of ten questions have never once
+      <span>On the Compliance form, {co_dead} of {co_items} questions have never once
       distinguished any two calls. One of them is the item recording whether HIPAA
       verification was performed.</span></li>
   <li><b>Read the linkage fragility number.</b>

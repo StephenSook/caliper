@@ -21,7 +21,7 @@ from pathlib import Path
 import pytest
 
 from caliper.ingest.normalize import Observation, _assign_occasions
-from caliper.ingest.pii_scan import scan_and_redact, scan_many
+from caliper.ingest.pii_scan import PATTERNS, scan_and_redact, scan_many
 from caliper.ingest.pseudonymize import pseudonymize
 
 DATA_DIR = Path(os.environ.get("CALIPER_DATA_DIR", "data/raw"))
@@ -99,12 +99,21 @@ def test_scanner_detects_every_pattern_it_claims():
     fake_member = "ABC" + "123456789"
     planted = (
         f"member {fake_member}, ssn {fake_ssn}, seen 03/14/2026, "
-        f"call ref 1025276, mail a.b@example.com, tel {fake_phone}"
+        f"call ref 1025276, mail a.b@example.com, tel {fake_phone}, "
+        # The seventh pattern. It had no planted violation, and it was the one
+        # that did not work: the expression matched only the literal
+        # abbreviation, so the spelling people actually use walked past it. The
+        # untested pattern being the broken one is not a coincidence.
+        "Group #884412"
     )
     result = scan_and_redact(planted)
-    for kind in ["MEMBER_ID", "US_SSN", "DATE_OF_SERVICE", "CLAIM_OR_CALL_ID", "EMAIL", "PHONE"]:
+    for kind, _pattern in PATTERNS:
         assert kind in result.counts, f"scanner missed {kind}"
-    assert result.total >= 6
+    assert len(result.counts) == len(PATTERNS), (
+        f"the planted text must exercise every pattern: "
+        f"{sorted(k for k, _ in PATTERNS)} vs {sorted(result.counts)}"
+    )
+    assert result.total >= len(PATTERNS)
     # And the redacted text must not still contain what it claims to have removed.
     assert fake_member not in result.redacted_text
     assert fake_ssn not in result.redacted_text

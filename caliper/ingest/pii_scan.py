@@ -18,7 +18,10 @@ from dataclasses import dataclass
 PATTERNS: list[tuple[str, re.Pattern[str]]] = [
     ("US_SSN", re.compile(r"\b\d{3}-\d{2}-\d{4}\b")),
     ("MEMBER_ID", re.compile(r"\b[A-Z]{3}\d{6,12}\b")),
-    ("GROUP_NUMBER", re.compile(r"\bgrp\s*#?\s*\d{4,}\b", re.I)),
+    # "grp" alone missed the spelling people actually use. The untested pattern
+    # was the ineffective one, which is not a coincidence: nothing ever planted a
+    # violation against it, so nothing ever exercised what it matches.
+    ("GROUP_NUMBER", re.compile(r"\b(?:grp|group)\s*(?:no\.?|#)?\s*:?\s*\d{4,}\b", re.I)),
     ("EMAIL", re.compile(r"\b[\w.+-]+@[\w-]+\.[\w.]{2,}\b")),
     ("PHONE", re.compile(r"\b(?:\+1[\s.-]?)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}\b")),
     ("DATE_OF_SERVICE", re.compile(r"\b(?:0?[1-9]|1[0-2])/(?:0?[1-9]|[12]\d|3[01])/(?:19|20)\d{2}\b")),

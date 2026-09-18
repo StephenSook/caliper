@@ -41,8 +41,7 @@ flowchart TB
 
     subgraph INT["intervene, deterministic. NO MODEL"]
         IR["item_rewrite<br/>the defective question, replaced"]
-        OB["objectives<br/>Mager three part, id and parent"]
-        DR["drill<br/>the practice script"]
+        OB["objectives<br/>Mager three part objectives,<br/>the activity and the drill script"]
         AL["align<br/>every element traces to the approved diagnosis"]
     end
 
@@ -62,10 +61,10 @@ flowchart TB
     S --> C & K & W
     C & K & W --> T --> R --> E
     E --> GATE
-    GATE -->|approved| IR --> OB --> DR --> AL
+    GATE -->|approved| IR --> OB --> AL
     AL --> WB & JD
     IM --> JD
-    DR --> VOICE
+    OB --> VOICE
     HUMAN2 <-->|"speech"| VOICE
     VOICE -->|transcript| SCORE
     SCORE -->|"same rewritten item"| JD

@@ -49,7 +49,12 @@ LEGAL: dict[RunState, set[RunState]] = {
     RunState.APPROVED: {RunState.INTERVENTION_GENERATED},
     RunState.REJECTED: {RunState.DIAGNOSED},
     RunState.INTERVENTION_GENERATED: {RunState.PRACTICE_SCORED, RunState.COMPLETE},
-    RunState.PRACTICE_SCORED: {RunState.COMPLETE},
+    # A retake is legal. Rehearsing a call and then taking it again on stage is
+    # the normal way this is used, and the previous rule made the second score
+    # an illegal transition whose exception was swallowed: the run silently kept
+    # the FIRST take, so the screen showed the rehearsal's result while the real
+    # call was dropped.
+    RunState.PRACTICE_SCORED: {RunState.PRACTICE_SCORED, RunState.COMPLETE},
     RunState.COMPLETE: set(),
 }
 

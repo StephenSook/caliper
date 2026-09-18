@@ -140,11 +140,15 @@ def audit_all(observations, redactions: dict | None = None) -> dict:
 if __name__ == "__main__":
     import argparse
     import json
+    import os
 
     from caliper.ingest.normalize import load_all
 
     parser = argparse.ArgumentParser(description="Regenerate the instrument audit.")
-    parser.add_argument("--data-dir", default="data/raw")
+    # CALIPER_DATA_DIR is what the README tells a reader to set, and this module
+    # is the command it tells them to run. Not reading it here meant following
+    # those two sentences in order produced a FileNotFoundError.
+    parser.add_argument("--data-dir", default=os.environ.get("CALIPER_DATA_DIR", "data/raw"))
     parser.add_argument("--domain", default=None)
     args = parser.parse_args()
 

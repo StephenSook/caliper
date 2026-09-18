@@ -27,8 +27,15 @@ cache, so any figure below can be made to regenerate by a stranger.
 That instance holds **no case package**. It runs on a de-identified item score
 matrix: salted pseudonyms, binary pass or fail per question, and no name,
 comment, date, member identifier or call identifier. The salt was generated at
-export, used once and never recorded, so the pseudonyms cannot be reversed even
-by someone holding the original workbook. See
+export, used once and never recorded, so the pseudonyms cannot be inverted.
+
+**Inversion is not the only attack, and the honest limit is worth stating.** The
+export carries the client's own item text and each evaluation's full pass or fail
+vector, so somebody holding the original workbook could align score patterns and
+recover the mapping without touching the hash. That is a linkage attack, not a
+brute force, and nothing here prevents it. It is an acceptable risk for a
+de-identified instrument matrix shown to the people who supplied it, and it would
+not be acceptable for a public release of member level data. See
 [docs/data-handling.md](docs/data-handling.md).
 
 The live spoken call is the one thing that instance cannot do, and it says so
@@ -85,9 +92,19 @@ if a second one ever appears. The diagnosis narrative, the training objectives,
 the activity, the drill script and the six workbook tabs are templates filled
 from computed values.
 
-**A model never decides anything and never performs arithmetic.** If you ask how
-we know a model did not hallucinate a number, the answer is that there is one
+**A model never performs arithmetic, and never decides a finding.** If you ask
+how we know a model did not hallucinate a number, the answer is that there is one
 model call in the entire system and it is a synthetic member speaking.
+
+One place deserves a sharper sentence than that, because it is the one a careful
+judge will find. On the third practice criterion, whether the member restated
+what she owes, the RULE is in code and auditable: the transcript must contain a
+figure within half a dollar of the computed responsibility, plus a reason. But
+the member is played by the model, and the system prompt hands it that figure, so
+what the code is reading is the model's own choice of whether to recite it. The
+rule is deterministic; the observation is not. The other two criteria read only
+what the human representative said, and nothing anywhere lets a model produce a
+number that reaches a screen.
 
 ---
 
@@ -149,7 +166,7 @@ caliper/
   ingest/       normalize three exports, pseudonymize, scan for identifiers
   instrument/   KR-20 with a Feldt interval, item analysis, connectivity, power
   diagnose/     root cause taxonomy, corroboration scan, deterministic engine
-  intervene/    item rewrite, objectives, drill, alignment validator
+  intervene/    item rewrite, objectives and the drill script, alignment validator
   export/       the sponsor's own six tab design workbook
   voice/        Amazon Nova 2 Sonic session, events, live scoring tool
   orchestrator/ run state machine, human approval gate, ledger

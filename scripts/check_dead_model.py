@@ -22,7 +22,13 @@ import sys
 from pathlib import Path
 
 DEAD = "amazon.nova-" + "sonic-v1:0"
-LIVE = "amazon.nova-2-sonic-v1:0"
+# Assembled at runtime for the same reason the forbidden id is: a literal here
+# makes this file satisfy its own want-1 check, which makes the "this scan is not
+# looking where the model ids live" branch unreachable while the file exists. The
+# guard would then pass forever on its own source. Assembling it means this file
+# no longer contains the literal at all, so the want-1 half can only be satisfied
+# by a real occurrence somewhere else in the tree, which is the point.
+LIVE = "amazon.nova-" + "2-sonic-v1:0"
 MIN_FILES = 10
 SUFFIXES = {".py", ".ts", ".tsx", ".js", ".jsx", ".json", ".yml", ".yaml", ".md", ".toml", ".sh"}
 

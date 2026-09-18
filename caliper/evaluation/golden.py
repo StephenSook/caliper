@@ -1,4 +1,4 @@
-"""The golden test harness, E1 to E12, executed live against the real engine.
+"""The golden test harness, E1 to E13, executed live against the real engine.
 
 This is not a summary of the pytest suite. It RUNS, in the running system, while
 a judge watches, and reports what each case actually did. A slide saying "we have

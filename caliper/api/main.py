@@ -12,6 +12,7 @@ the evidence has to be readable without logging in and without running anything.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import json
 import os
 from pathlib import Path
@@ -513,8 +514,36 @@ async def practice(ws: WebSocket, run_id: str) -> None:
 
         pump = asyncio.create_task(forward())
 
+        # Watch the pump as well as the browser, and this is the whole point.
+        #
+        # forward() is the ONLY thing that ever writes model output to the
+        # client. Awaiting just ws.receive() left its task result unobserved: if
+        # the stream died, on a throttle, a validation error, a dropped HTTP/2
+        # connection, the exception was stored on a task nobody read while this
+        # loop happily went on consuming microphone frames. Nothing reached the
+        # handler below, so no error was sent and the socket was never closed.
+        #
+        # The client had already set connected on the ready event and started its
+        # timer, so the person on stage watched a stopwatch run against a dead
+        # stream. That is the exact failure this file claims to have converted
+        # into a sentence, and it was still here.
+        #
+        # Racing the two means a dead pump ends the turn: its exception is
+        # re-raised into the handler below, which sends it to the browser.
         while True:
-            message = await ws.receive()
+            incoming = asyncio.create_task(ws.receive())
+            done, _ = await asyncio.wait({incoming, pump}, return_when=asyncio.FIRST_COMPLETED)
+
+            if pump in done:
+                incoming.cancel()
+                exc = pump.exception()
+                if exc is not None:
+                    raise exc
+                # The model stream ended on its own, which is a normal end of
+                # call rather than a fault.
+                break
+
+            message = incoming.result()
             if message.get("type") == "websocket.disconnect":
                 break
             if (data := message.get("bytes")) is not None:
@@ -551,8 +580,30 @@ async def practice(ws: WebSocket, run_id: str) -> None:
                     # a claim, not a verified record.
                     actor_verified=operator.verified,
                 )
-        except (KeyError, IllegalTransition):
+        except KeyError:
+            # The run vanished while the call was in flight. Nothing to record
+            # and nothing the caller can do about it.
             pass
+        except IllegalTransition as exc:
+            # A score that cannot be recorded used to disappear here. The run
+            # kept whatever it had and the screen went on showing it, which is
+            # the same silence this file spends its length arguing against.
+            #
+            # A retake is legal now, so reaching this means the run was not in a
+            # state where a practice score means anything, most often a call
+            # taken before a human approved the diagnosis. That is worth saying
+            # rather than dropping.
+            with contextlib.suppress(Exception):
+                await ws.send_json(
+                    {
+                        "type": "not_recorded",
+                        "detail": (
+                            f"the call happened but was not recorded against {run_id}: {exc}. "
+                            "A practice score is only kept once a human has approved a "
+                            "diagnosis and the intervention has been generated."
+                        ),
+                    }
+                )
         try:
             await ws.close()
         except Exception:  # noqa: BLE001

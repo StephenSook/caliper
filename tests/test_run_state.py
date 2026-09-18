@@ -89,10 +89,32 @@ def test_generation_refuses_after_an_explicit_rejection(store):
         require_approved(store, run_id)
 
 
-def test_request_more_evidence_returns_the_run_for_re_diagnosis(store):
+def test_request_more_evidence_leaves_the_gate_open(store):
+    """It used to return DIAGNOSED, and that stranded the run permanently.
+
+    Nothing reopens the gate: open_gate is called once, from pipeline.start. So
+    the fourth button on the approval screen moved the run to a state where every
+    later decision and the generate call all raised, while the interface had
+    already hidden the buttons. There was no way forward but a full re audit, and
+    a judge pressing it mid demonstration would have found that out.
+
+    This test asserted that behaviour, which is how a test defends a bug: fixing
+    it failed the suite and read as a regression. The documented behaviour, drawn
+    as a self loop on AWAITING_APPROVAL in docs/architecture.md, is the intended
+    one, and it is now the real one.
+    """
     run_id = advance_to_gate(store)
     state = record_decision(store, run_id, "REQUEST_MORE_EVIDENCE", actor="Reviewer")
-    assert state is RunState.DIAGNOSED
+    assert state is RunState.AWAITING_APPROVAL
+
+    # The run has to actually recover, not merely report a friendlier state.
+    assert record_decision(store, run_id, "APPROVE", actor="Reviewer") is RunState.APPROVED
+
+    # And the ledger keeps both steps, so the request and the reopening are both
+    # visible rather than one quietly undoing the other.
+    states = [t.__dict__.get("to_state") for t in store.ledger(run_id)]
+    assert states.count("AWAITING_APPROVAL") >= 2, states
+    assert "DIAGNOSED" in states, states
 
 
 def test_edit_requires_the_edited_diagnosis(store):
