@@ -123,6 +123,34 @@ The member is synthetic and **you say that every single time**. Her plan
 mechanics are real and public. The criteria fill in during the conversation,
 scored by code, not by a model.
 
+**The call has five beats and the third one is supposed to fail.** This was
+tested end to end the morning of, and it lands 3 of 3.
+
+1. **Verify her.** Ask for full name, date of birth, and the member id from the
+   front of the card. `VERIFY_IDENTITY` goes green.
+2. **Explain it.** The hospital billed 1700, the allowed amount is 1425, she is
+   never responsible for that 275 difference because it is a network adjustment
+   that gets written off, her deductible is met, so she owes twenty percent
+   coinsurance of the allowed amount, which is 285. `ALLOWED_VS_BILLED` goes
+   green.
+3. **Ask for the teach back.** "Tell me in your own words what you owe and why."
+   **She will get it wrong.** She says something like "I owe three hundred
+   because the hospital charged too much." That is the misconception she was
+   built to have, and the criterion stays red. **Do not rush past this. Say it
+   out loud: she got it wrong, and the form caught it.**
+4. **Correct her and ask again.** "Not quite, and that is the exact part people
+   get wrong. You are not paying the difference between billed and allowed, that
+   gets written off. You owe twenty percent coinsurance of the allowed amount,
+   and that is two hundred and eighty five dollars. Now tell me back, how much do
+   you owe and why?" She will now say it correctly.
+5. **Close the call.** "That is exactly right, you have got it. Anything else on
+   this claim today?" **The criterion goes green on this beat, not the previous
+   one.** The score needs one more turn to land, so do not stop talking the
+   moment she says the right number.
+
+She has to say both the amount and a reason (coinsurance, percent, deductible)
+for it to pass. A wrong restatement fails, which is the point.
+
 ### Screen 07, what being wrong costs
 
 | One curriculum hour at 17.47 designer hours | USA | Mexico | Philippines |
