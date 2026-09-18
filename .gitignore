@@ -17,6 +17,12 @@ CALIPER_BUILD_SPEC.md
 # NEVER reach a repo, a screenshot, a slide, or a demo. Synthetic data only.
 /case-package/
 /data/raw/
+
+# The de-identified export. It carries no identifier, which is proven by
+# scripts/check_deidentified.py, but it is still DERIVED from the confidential
+# case package and it is not synthetic, so it does not belong in a public
+# repository. It is generated locally and handed to a host out of band.
+/data/deidentified/
 *.xlsx
 *.xls
 *.csv

@@ -11,6 +11,7 @@ one, and a positional map silently reads the wrong field.
 
 from __future__ import annotations
 
+import json
 import re
 import unicodedata
 from dataclasses import asdict, dataclass, field
@@ -188,9 +189,70 @@ def _assign_occasions(observations: list[Observation]) -> list[Observation]:
     ]
 
 
+DEIDENTIFIED_EXPORT = "observations.json"
+
+
+def load_deidentified(path: Path):
+    """Load the de-identified matrix a public host runs on.
+
+    The supplied case package is confidential and does not leave the machine
+    that holds it. Everything CALIPER computes is a function of one thing:
+    which questions were marked passed or failed on which evaluation, by which
+    rater, about which agent. scripts/export_deidentified.py writes exactly that
+    and nothing else, and scripts/check_deidentified.py proves it before it
+    ships.
+
+    This is not a cached result. The rows are the matrix the arithmetic runs on,
+    so the coefficient, the interval, the item statistics and the diagnosis are
+    still computed live on the host from these observations. Nothing downstream
+    can tell the difference, which is the point: the deployed instance is the
+    same product, not a demonstration of it.
+
+    The date is gone by construction. Observation drops it at its serialization
+    boundary, so it was never written; occasion_index carries the ordering that
+    the date was only ever used to establish.
+    """
+    payload = json.loads(path.read_text())
+    rows = payload.get("observations", [])
+    if not rows:
+        raise ValueError(f"{path} contains no observations")
+
+    observations = [
+        Observation(
+            eval_id=r["eval_id"],
+            agent_ref=r["agent_ref"],
+            rater_ref=r["rater_ref"],
+            domain=r["domain"],
+            item_id=r["item_id"],
+            item_text=r["item_text"],
+            passed=r["passed"],
+            # Deliberately empty. Nothing downstream reads it, and putting a
+            # plausible looking date here would invent data.
+            call_date="",
+            occasion_index=int(r.get("occasion_index", 0)),
+        )
+        for r in rows
+    ]
+    return observations, dict(payload.get("redactions", {}))
+
+
 def load_all(data_dir: str | Path, salt: str | None = None):
-    """Load all three domains. Returns (observations, redaction counts, salt)."""
+    """Load all three domains. Returns (observations, redaction counts, salt).
+
+    A directory holding the de-identified export is served from that instead of
+    the supplied workbooks, which is how a public host runs the real engine
+    without ever holding the confidential package.
+    """
     directory = Path(data_dir)
+
+    export = directory / DEIDENTIFIED_EXPORT
+    if export.exists():
+        observations, redactions = load_deidentified(export)
+        # The salt is not returned because there is nothing left to pseudonymize:
+        # the references in the export are already pseudonyms, and the salt that
+        # produced them was used once and never recorded.
+        return observations, redactions, ""
+
     salt = salt or new_salt()
     observations: list[Observation] = []
     redactions: dict[str, int] = {}
