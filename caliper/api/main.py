@@ -107,6 +107,8 @@ def _resolve_data_dir() -> Path:
     return Path(os.environ.get("CALIPER_DATA_DIR", "data/raw"))
 
 
+REGION = os.environ.get("AWS_REGION", "us-east-1")
+
 DATA_DIR = _resolve_data_dir()
 
 app = FastAPI(
@@ -153,14 +155,61 @@ def speech_available() -> bool:
     on an instance with a role, and false on a host that was deliberately given
     neither.
     """
+    return _speech_probe()["available"]
+
+
+_SPEECH_CACHE: dict = {"at": 0.0, "result": None}
+_SPEECH_TTL_SECONDS = 300
+
+
+def _speech_probe() -> dict:
+    """Resolve, and actually exercise, the credentials the voice layer will use.
+
+    Checking that credentials EXIST is not a check. On this machine the default
+    profile is an `aws login` session whose credentials are present and expired:
+    `get_credentials()` returns an object, `get_frozen_credentials()` raises
+    LoginRefreshRequired, and only the second one tells the truth. The first
+    version of this function asked the first question, answered "available", and
+    would have offered a call that could not happen.
+
+    So this resolves the SAME profile the voice session resolves, freezes the
+    credentials, and asks STS who they belong to. Cached for five minutes because
+    health is polled and the answer changes on the timescale of a session
+    expiring, not a request.
+    """
+    import time
+
+    now = time.time()
+    cached = _SPEECH_CACHE["result"]
+    if cached is not None and now - _SPEECH_CACHE["at"] < _SPEECH_TTL_SECONDS:
+        return cached
+
+    result: dict = {"available": False, "profile": None, "account": None, "reason": ""}
     try:
         import boto3
 
-        return boto3.Session().get_credentials() is not None
-    except Exception:
-        # A missing or broken SDK is indistinguishable from no credentials as far
-        # as the person holding the phone is concerned.
-        return False
+        from caliper.voice.sonic_session import PROFILE
+
+        result["profile"] = PROFILE
+        session = boto3.Session(profile_name=PROFILE) if PROFILE else boto3.Session()
+        creds = session.get_credentials()
+        if creds is None:
+            result["reason"] = f"no credentials resolved for profile {PROFILE!r}"
+        else:
+            # Raises on an expired session that cannot refresh itself.
+            creds.get_frozen_credentials()
+            who = session.client("sts", region_name=REGION).get_caller_identity()
+            result["account"] = who["Account"]
+            result["available"] = True
+            result["reason"] = "credentials resolved and accepted by STS"
+    except Exception as exc:  # noqa: BLE001
+        # A broken SDK, an expired session and an absent profile are the same
+        # fact to the person holding the phone: no call.
+        result["reason"] = f"{type(exc).__name__}: {str(exc)[:160]}"
+
+    _SPEECH_CACHE["at"] = now
+    _SPEECH_CACHE["result"] = result
+    return result
 
 
 @app.get("/api/health")
@@ -175,6 +224,7 @@ def health() -> dict:
         "deterministic_core_requires_aws": False,
         # The interface reads this to decide whether to offer a live call at all,
         # rather than offering one that cannot happen.
+        "speech": _speech_probe(),
         "speech_available": speech_available(),
         "operator_auth_enforced": auth_required(),
         "allowed_origins": allowed_origins(),
@@ -445,6 +495,17 @@ async def practice(ws: WebSocket, run_id: str) -> None:
 
     try:
         await session.open()
+
+        # The ready event is EMITTED by open() and never yielded, and _emit only
+        # calls the optional on_event hook, which nothing sets here. So the
+        # client's ready branch had never once fired: it waits for the criteria
+        # to arrive and they arrived from somewhere else, which looked fine and
+        # meant the socket never confirmed it was actually live.
+        #
+        # It is sent here rather than by wiring on_event to the socket, because
+        # receive() both emits AND yields the same event, so that wiring would
+        # send every transcript and every audio chunk twice.
+        await ws.send_json({"type": "ready", "criteria": session.score_state.as_payload()["criteria"]})
 
         async def forward() -> None:
             async for event in session.receive():

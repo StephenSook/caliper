@@ -37,7 +37,15 @@ from caliper.voice import events as ev
 from caliper.voice.scoring_tool import PracticeScore, new_score, safe_score
 
 REGION = os.environ.get("AWS_REGION", "us-east-1")
-PROFILE = os.environ.get("AWS_PROFILE")
+# The profile holding the event account's credentials.
+#
+# Defaulting to None meant boto3 resolved the DEFAULT profile, which on this
+# machine is an `aws login` session that expires and cannot be refreshed without
+# a human. The practice call therefore failed with an authentication error while
+# every other part of the product was fine, and nothing anywhere said which
+# profile it had tried. Naming it here makes the app work with no environment
+# setup and makes the wrong answer visible instead of silent.
+PROFILE = os.environ.get("AWS_PROFILE") or "caliper"
 MODEL_ID = os.environ.get("CALIPER_VOICE_MODEL_ID", "amazon.nova-2-sonic-v1:0")
 
 # The documented connection limit is eight minutes. Transition early enough to
