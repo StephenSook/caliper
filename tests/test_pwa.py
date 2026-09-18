@@ -218,3 +218,48 @@ def test_the_native_shell_origins_are_allowed() -> None:
 
     # And it still refuses an origin nobody put on the list.
     assert not check_websocket_origin("https://evil.example", host="example.invalid")
+
+
+def test_no_text_input_can_be_smaller_than_the_ios_zoom_threshold() -> None:
+    """iOS zooms the page when a text field under 16px takes focus.
+
+    It does not zoom back out on blur. One tap on one field leaves every screen
+    after it zoomed and panned sideways for the rest of the session, and there is
+    no error, no console message and nothing visible on a desktop browser or in a
+    screenshot taken before anything is focused. It was found by typing into the
+    app running on a phone and looking at the result.
+
+    This scans for the guard rather than the size, because the sizes are fluid:
+    the interface's own type scale is a clamp that resolves to about 15.2px at
+    phone width, which reads as safe and is not. Any rule that sets a font on a
+    text input has to route it through max(16px, ...).
+    """
+    import re
+
+    sources = {
+        "frontend/src/styles/app.css": APP_CSS.read_text(),
+        "mobile/shell/index.html": (ROOT / "mobile" / "shell" / "index.html").read_text(),
+    }
+
+    # Selectors that can put the caret in a text field. A rule on any of these
+    # that sets a font size owes us the guard.
+    selector = re.compile(r"(^|[\s,>])(input|textarea|select)\b[^{}]*\{([^}]*)\}", re.M)
+
+    checked = 0
+    for name, css in sources.items():
+        for match in selector.finditer(css):
+            body = match.group(3)
+            font = re.search(r"font(?:-size)?\s*:\s*([^;]+);", body)
+            if not font:
+                continue
+            checked += 1
+            declaration = font.group(1)
+            guarded = "max(16px" in declaration or re.search(r"\b1[6-9]px|\b[2-9][0-9]px", declaration)
+            assert guarded, (
+                f"{name}: a text input sets {declaration.strip()!r}, which can resolve "
+                f"below 16px and will zoom iOS permanently. Use max(16px, ...)."
+            )
+
+    # A scan that walked nothing reports clean in the same words as one that
+    # walked everything.
+    assert checked >= 2, f"only {checked} input font rules inspected; the scan found nothing to check"

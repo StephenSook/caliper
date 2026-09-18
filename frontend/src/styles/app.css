@@ -307,7 +307,19 @@
 .gate-actor { display: flex; flex-direction: column; gap: 6px; max-width: 320px; margin-bottom: var(--space-3); }
 .gate-actor input {
   background: var(--ink-800); border: var(--hairline); border-radius: var(--radius);
-  color: var(--paper-100); padding: 0.6rem 0.8rem; font-family: var(--font-body); font-size: var(--step-0);
+  color: var(--paper-100); padding: 0.6rem 0.8rem; font-family: var(--font-body);
+  /*
+    Never below 16px, and the max() is the whole point.
+
+    iOS zooms the page when a text field with a font smaller than 16px receives
+    focus, and it does NOT zoom back out on blur. --step-0 resolves to about
+    15.2px at phone width, so tapping this field left every screen after it
+    zoomed and panned for the rest of the session. It is invisible on a desktop
+    browser and in a screenshot taken before anything is focused.
+
+    On a wide viewport max() yields --step-0 as before, so nothing changes there.
+  */
+  font-size: max(16px, var(--step-0));
 }
 .gate-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px,1fr)); gap: var(--space-2); }
 .gate-btn {
