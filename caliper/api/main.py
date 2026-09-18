@@ -39,7 +39,51 @@ from caliper.orchestrator.gate import GateNotSatisfied
 from caliper.orchestrator.run_state import IllegalTransition, RunState, RunStore
 from caliper.voice.sonic_session import SonicSession
 
-DATA_DIR = Path(os.environ.get("CALIPER_DATA_DIR", "data/raw"))
+
+def _resolve_data_dir() -> Path:
+    """Where this instance reads its observations from.
+
+    Three cases, in order:
+
+      CALIPER_OBSERVATIONS_GZ_B64   a deployed host. The de-identified matrix
+                                    travels as one gzipped base64 environment
+                                    variable, about six kilobytes, and is
+                                    materialised once at boot. This exists
+                                    because the matrix cannot live in the
+                                    repository: it carries no identifier but it
+                                    is derived from the confidential package and
+                                    is not synthetic, so a public git history is
+                                    the wrong place for it, and an environment
+                                    variable is the one channel every host
+                                    already has.
+      CALIPER_DATA_DIR              an explicit directory, which is how the
+                                    export is served locally
+      data/raw                      the supplied workbooks, on the machine that
+                                    holds them
+
+    The decoded file is written to a temporary directory rather than into the
+    tree, so a deploy that restarts gets a clean copy and nothing is left behind
+    on a shared filesystem.
+    """
+    packed = os.environ.get("CALIPER_OBSERVATIONS_GZ_B64", "").strip()
+    if packed:
+        import base64
+        import gzip
+        import tempfile
+
+        raw = gzip.decompress(base64.b64decode(packed))
+        # Fail loudly here rather than letting a corrupted variable surface much
+        # later as an empty audit, which renders as a page with no findings
+        # rather than as an error.
+        json.loads(raw)
+        directory = Path(tempfile.mkdtemp(prefix="caliper-data-"))
+        (directory / "observations.json").write_bytes(raw)
+        return directory
+
+    return Path(os.environ.get("CALIPER_DATA_DIR", "data/raw"))
+
+
+DATA_DIR = _resolve_data_dir()
 
 app = FastAPI(
     title="CALIPER",

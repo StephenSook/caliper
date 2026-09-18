@@ -1,0 +1,29 @@
+# Nothing from here reaches an image. The first three lines are the ones that
+# matter: the supplied case package, the de-identified export and any credential
+# must never be baked into a layer, because an image layer is as durable and as
+# copyable as a git commit.
+data/
+*.xlsx
+*.docx
+*.pdf
+*.m4a
+.env
+.env.*
+*.jks
+*.keystore
+*.p8
+*.p12
+
+.git/
+.venv/
+node_modules/
+frontend/node_modules/
+frontend/dist/
+mobile/
+artifacts/
+.runs/
+*.egg-info/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+.DS_Store
