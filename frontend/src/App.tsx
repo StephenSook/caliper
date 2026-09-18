@@ -3,6 +3,7 @@ import Lenis from "lenis";
 import { Audit } from "./screens/Audit";
 import { Diagnosis } from "./screens/Diagnosis";
 import { Gate } from "./screens/Gate";
+import { Impact } from "./screens/Impact";
 import { Intervention } from "./screens/Intervention";
 import { Practice } from "./screens/Practice";
 import { api, workbookUrl, type RunResponse, type Transition } from "./lib/api";
@@ -277,6 +278,7 @@ export default function App() {
               workbookHref={workbookUrl(run.run_id)}
             />
           )}
+          {bundle && <Impact />}
           {bundle && (
             <Practice
               runId={run.run_id}

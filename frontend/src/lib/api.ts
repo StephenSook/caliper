@@ -194,9 +194,54 @@ async function call<T>(path: string, init?: RequestInit): Promise<T> {
   return res.json() as Promise<T>;
 }
 
+export interface ImpactRow {
+  geography: string;
+  key: string;
+  fully_loaded_hourly: number;
+  cost_per_curriculum_hour: number;
+  cost_for_this_intervention: number;
+  rework_cycle_cost: number;
+  statutory_note: string;
+}
+
+export interface ImpactReport {
+  curriculum_hours: number;
+  baseline: {
+    key: string;
+    label: string;
+    hours_per_curriculum_hour: number;
+    scope: string;
+    provenance: string;
+    caveat: string;
+  };
+  baseline_choice_matters: {
+    low: { key: string; hours: number; scope: string };
+    high: { key: string; hours: number; scope: string };
+    ratio: number;
+    statement: string;
+  };
+  rows: ImpactRow[];
+  usa_multiple_of: Record<string, number>;
+  rework_baseline: { key: string; hours_per_curriculum_hour: number; why: string };
+  rate_caveat: string;
+  annual_savings_claim: { licensed: boolean; reason: string };
+  baselines_available: {
+    key: string;
+    label: string;
+    hours_per_curriculum_hour: number;
+    provenance: string;
+    scope: string;
+  }[];
+}
+
 export const api = {
   health: () => call<Record<string, unknown>>("/api/health"),
   evidence: () => call<Record<string, unknown>>("/api/evidence"),
+  /** Labor and cost across the three geographies the case study names. */
+  impact: (curriculumHours: number, baseline: string) =>
+    call<ImpactReport>(
+      `/api/impact?curriculum_hours=${curriculumHours}&baseline=${encodeURIComponent(baseline)}`,
+    ),
   createRun: () => call<RunResponse>("/api/runs", { method: "POST", body: "{}" }),
   getRun: (id: string) => call<Record<string, unknown>>(`/api/runs/${id}`),
   /** The most recent run on this host, or null. Used by the handset to attach
