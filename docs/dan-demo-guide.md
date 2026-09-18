@@ -45,7 +45,7 @@ Three tabs, one per form.
 | Form | KR-20 | 95% interval | Unusable items |
 |---|---|---|---|
 | Member Experience | 0.4661 | -0.019 to 0.776 | 5 of 9 |
-| Business Process | 0.4155 | -0.224 to 0.764 | 2 of 4 |
+| Business Process | 0.4155 | -0.223 to 0.764 | 2 of 4 |
 | Compliance | 0.3101 | -0.309 to 0.709 | 10 of 10 |
 
 > "All three forms have a 95 percent confidence interval whose lower bound sits
