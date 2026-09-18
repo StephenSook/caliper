@@ -211,11 +211,16 @@ Running locally, because CI has neither half of what they compare:
 - `scripts/check_claims.py` regenerates every judge facing figure from the engine
   and reads every surface a judge can read, asserting each figure is PRESENT and,
   more importantly, that no contradictory value of the same kind sits beside it.
-  Presence alone would have passed while the retired 0.5048 sat in a paragraph
-  next to the corrected 0.4661, which is the exact drift that started this
-  project. A figure quoted deliberately because it is wrong, as the run of show
-  does when correcting that number out loud, is listed as a named exception with
-  its reason rather than tolerated by a looser pattern.
+  Presence alone would have passed while the build spec's retired coefficient sat
+  in a paragraph next to the corrected one, which is the exact drift that started
+  this project. A figure quoted deliberately BECAUSE it is wrong, as the run of
+  show does when correcting that number out loud on stage, is listed as a named
+  exception with its surface and its reason rather than tolerated by a looser
+  pattern.
+
+  This paragraph deliberately does not print the retired figure. Widening the
+  exception to cover the README would have excused it anywhere in the file,
+  including the results table, which is the one place it must never reappear.
 - `scripts/smoke_voice.py` synthesises a three turn call and sends it through the
   shipped WebSocket, asserting a ready event, a transcript and returned audio.
   Checking the call used to require a person and a headset, which is why it did
