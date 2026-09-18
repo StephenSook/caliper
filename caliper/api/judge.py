@@ -128,6 +128,14 @@ one thing, read the box below.</p>
       <span>Open <a href="{base}/api/evidence">/api/evidence</a>. It recomputes from
       the source on every request. Or clone the repository and run
       <code>python -m caliper.instrument.audit</code>.</span></li>
+  <li><b>Take it out on your own phone.</b>
+      <span>Open <a href="{base}/practice">{base}/practice</a> on a phone and add it
+      to the home screen. It runs fullscreen, with no store and no install. The
+      phone is the handset and it attaches itself to whatever run this host is
+      working on, so the laptop and the phone are one run and one audit trail.
+      A spoken call needs a speech model and therefore credentials, which this
+      host was deliberately not given, and it says so rather than failing
+      quietly.</span></li>
 </ol>
 
 <h2>The three quality forms, measured</h2>

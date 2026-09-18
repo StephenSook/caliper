@@ -16,6 +16,32 @@ Built for the KSU Coles College of Business AI Competition, September 17 and 18
 
 ---
 
+## Open it
+
+**https://caliper-77ma.onrender.com** and **https://caliper-77ma.onrender.com/judge**
+
+No credential, no install. The audit, the diagnosis, the design workbook and the
+golden cases all run there, recomputed on request rather than served from a
+cache, so any figure below can be made to regenerate by a stranger.
+
+That instance holds **no case package**. It runs on a de-identified item score
+matrix: salted pseudonyms, binary pass or fail per question, and no name,
+comment, date, member identifier or call identifier. The salt was generated at
+export, used once and never recorded, so the pseudonyms cannot be reversed even
+by someone holding the original workbook. See
+[docs/data-handling.md](docs/data-handling.md).
+
+The live spoken call is the one thing that instance cannot do, and it says so
+rather than failing silently: a call needs a speech model and therefore
+credentials, which a public host is deliberately not given. Everything else is
+the real product.
+
+On a phone: [docs/mobile.md](docs/mobile.md). The web app installs to a home
+screen with no store and no review queue, and there is a signed Android build
+under [Releases](https://github.com/StephenSook/caliper/releases).
+
+---
+
 ## The finding
 
 A quality form decides who gets coached, who goes on a performance plan, and
@@ -70,8 +96,12 @@ caliper/
   voice/        Amazon Nova 2 Sonic session, events, live scoring tool
   orchestrator/ run state machine, human approval gate, ledger
   api/          FastAPI and WebSocket
-tests/          hand computed fixtures and golden tests E1 to E12
-scripts/        repository guards and the AWS preflight check
+  evaluation/   the golden harness, executed live rather than recorded
+frontend/       the interface, and a WebKit phone check
+mobile/         a thin native shell for iOS and Android
+tests/          hand computed fixtures and golden tests E1 to E13
+scripts/        repository guards, the AWS preflight, the de-identified export
+docs/           data handling, the mobile story, the field interview guide
 ```
 
 ## Running it
@@ -87,16 +117,43 @@ repository. Point `CALIPER_DATA_DIR` at a local copy to reproduce the audit.
 
 ## Guards
 
-Three checks run on every commit and in CI, each proven to fail before being
-trusted:
+Every one of these was proven to FAIL before it was trusted, and every one floors
+the amount of material it inspected, because a scan that walked nothing reports
+clean in exactly the same words as a scan that walked everything.
+
+Running in CI on every commit:
 
 - `scripts/check_confidential.py` refuses to let supplied case material or any
   personnel identifier become trackable.
 - `scripts/check_dashes.py` enforces the no em dash and no en dash rule, building
   its forbidden characters from code points so it cannot match itself.
-- `pytest` includes golden test E9, which asserts no identifier reaches a
-  rendered surface, running on a synthetic fixture so it executes in CI rather
-  than skipping where the confidential data is absent.
+- `scripts/check_dead_model.py` refuses the end of life Nova Sonic identifier,
+  assembling the forbidden string at runtime for the same reason.
+- `scripts/check_bundle_origin.py` refuses a development address in the built
+  interface. This one exists because the bug shipped: a production bundle
+  defaulting to a localhost API works on the machine that built it and is blocked
+  as mixed content everywhere else, with a green build, green tests and silent
+  logs.
+- `pytest`, including golden test E9, which asserts no identifier reaches a
+  rendered surface. It runs on a synthetic fixture so it executes in CI rather
+  than skipping where the confidential data is absent, because a conditionally
+  skipped test is a false green.
+
+Running locally, because CI has neither half of what they compare:
+
+- `scripts/check_deidentified.py` reads the shipped export and asserts no
+  identifier pattern, no field outside an explicit allowlist, no salt, and floors
+  on observations, evaluations, agents and raters. `scripts/export_deidentified.py`
+  additionally proves parity against the workbooks while both are in hand, and
+  deletes its own output on a mismatch rather than leaving it to be shipped.
+- `frontend/scripts/webkit-phone-check.mjs` loads the product and the native
+  launcher at iPhone geometry in WebKit, which is the engine WKWebView actually
+  runs, and asserts no horizontal overflow and no field below the 16px threshold
+  that zooms iOS permanently.
+
+`tests/test_deidentified.py` is the CI half of that split: it exercises the same
+code paths on a synthetic matrix so the loader and the parity logic are covered
+everywhere, while the artifact itself is checked where it exists.
 
 See [docs/data-handling.md](docs/data-handling.md) for the full confidentiality
 posture, including what we deliberately do not claim.
