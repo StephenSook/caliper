@@ -16,6 +16,23 @@
         --ease: cubic-bezier(0.16, 1, 0.1, 1);
       }
       * { box-sizing: border-box; }
+      /*
+        Nothing may widen the document.
+
+        body is a column flex container, so every child is a flex item, and a
+        flex item defaults to min-width:auto: it refuses to shrink below its own
+        intrinsic content width. A text input holding a long URL has a large
+        intrinsic width, so the field pushed the document wider than the screen
+        and the whole page panned sideways the moment the field was focused. It
+        stayed panned after the keyboard closed.
+
+        None of that is visible on a desktop browser, where the viewport is wider
+        than any URL. It was found by typing a real address into the app running
+        on a phone and looking at the result.
+      */
+      html, body { overflow-x: hidden; max-width: 100%; }
+      body > *, form > * { min-width: 0; max-width: 100%; }
+      form { display: contents; }
       body {
         margin: 0;
         background: var(--ink-900);
@@ -33,9 +50,14 @@
       label { display: block; font-size: 0.75rem; letter-spacing: 0.08em;
               text-transform: uppercase; color: var(--paper-500); margin-bottom: 8px; }
       input {
-        width: 100%; padding: 14px; border-radius: 10px;
+        width: 100%; min-width: 0; padding: 14px; border-radius: 10px;
+        /* A long value scrolls inside the field rather than stretching it. */
+        text-overflow: ellipsis;
         border: 1px solid var(--ink-700); background: #101216;
-        color: var(--paper-100); font: 13px ui-monospace, Menlo, monospace;
+        color: var(--paper-100);
+        /* 16px minimum: iOS zooms the page on focus below that and never
+           zooms back, which panned the whole launcher sideways. */
+        font: 16px ui-monospace, Menlo, monospace;
       }
       input:focus { outline: none; border-color: var(--signal); }
       button {
@@ -55,17 +77,20 @@
     <h1>CALIPER</h1>
     <p class="tag">Practice call handset</p>
 
-    <label for="host">Backend address</label>
-    <input
-      id="host"
-      type="url"
-      inputmode="url"
-      autocapitalize="off"
-      autocorrect="off"
-      spellcheck="false"
-      placeholder="https://something.trycloudflare.com"
-    />
-    <button id="go">Connect</button>
+    <form id="form">
+      <label for="host">Backend address</label>
+      <input
+        id="host"
+        type="url"
+        inputmode="url"
+        enterkeyhint="go"
+        autocapitalize="off"
+        autocorrect="off"
+        spellcheck="false"
+        placeholder="https://something.trycloudflare.com"
+      />
+      <button id="go" type="submit">Connect</button>
+    </form>
     <p class="status" id="status"></p>
 
     <p class="note">
@@ -118,7 +143,10 @@
 
       input.value = localStorage.getItem(KEY) || "";
 
-      button.addEventListener("click", async function () {
+      document.getElementById("form").addEventListener("submit", async function (event) {
+        // Without this the form navigates the WebView to a query string and the
+        // app appears to reset itself.
+        event.preventDefault();
         var origin = normalise(input.value);
         if (!origin) {
           say("That is not an https address. The microphone needs a secure context.", "bad");
@@ -154,7 +182,7 @@
       var saved = localStorage.getItem(KEY);
       if (saved) {
         say("Reconnecting to " + saved);
-        button.click();
+        document.getElementById("form").requestSubmit();
       }
     </script>
   </body>
