@@ -71,7 +71,30 @@ def _resolve_data_dir() -> Path:
         import gzip
         import tempfile
 
-        raw = gzip.decompress(base64.b64decode(packed))
+        # Whitespace first: a value pasted into a dashboard text area picks up
+        # newlines, and a dashboard is where this will be set by hand one day.
+        cleaned = "".join(packed.split())
+
+        # Accept both alphabets. Standard base64 uses + and /, which survive most
+        # transports and not all of them; the URL safe alphabet uses - and _ and
+        # survives everything. Padding is restored rather than required, because
+        # trailing = is the character most often lost.
+        cleaned = cleaned.replace("-", "+").replace("_", "/")
+        cleaned += "=" * (-len(cleaned) % 4)
+
+        try:
+            raw = gzip.decompress(base64.b64decode(cleaned, validate=True))
+        except Exception as exc:
+            # Say what is wrong with the value, since the alternative is a stack
+            # trace that names gzip and leaves the reader guessing whether the
+            # variable was truncated, re-encoded or simply absent.
+            raise RuntimeError(
+                "CALIPER_OBSERVATIONS_GZ_B64 is set but could not be decoded "
+                f"({type(exc).__name__}: {exc}). Received {len(cleaned)} characters "
+                "after cleaning. Regenerate it with scripts/pack_observations.py "
+                "and set it exactly, with no wrapping."
+            ) from exc
+
         # Fail loudly here rather than letting a corrupted variable surface much
         # later as an empty audit, which renders as a page with no findings
         # rather than as an error.
