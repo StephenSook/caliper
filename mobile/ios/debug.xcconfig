@@ -1,1 +1,12 @@
 CAPACITOR_DEBUG = true
+
+// Signing.
+//
+// Automatic signing cannot pick a team on its own, so a device build fails with
+// "no account for team" until this is set. It is the Apple Developer team that
+// already holds the distribution certificate on this machine, so installing to a
+// phone needs no new credential and no App Store Connect step.
+//
+// Simulator builds do not use this: they run with CODE_SIGNING_ALLOWED=NO.
+DEVELOPMENT_TEAM = Y8XVCMLQCZ
+CODE_SIGN_STYLE = Automatic
