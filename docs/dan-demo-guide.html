@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>CALIPER: live demo guide</title>
+<style>
+  @page { size: letter; margin: 14mm 15mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font: 10.5pt/1.5 -apple-system, "Helvetica Neue", Arial, sans-serif;
+    color: #15181c; margin: 0;
+  }
+  h1 { font-size: 20pt; margin: 0 0 2pt; letter-spacing: -0.4pt; }
+  .sub { color: #5d666f; font-size: 10pt; margin: 0 0 14pt; }
+  h2 {
+    font-size: 12pt; margin: 16pt 0 6pt; padding-top: 7pt;
+    border-top: 1.5px solid #15181c; letter-spacing: -0.2pt;
+  }
+  h3 { font-size: 10.5pt; margin: 11pt 0 3pt; }
+  p, li { margin: 0 0 5pt; }
+  ul, ol { margin: 0 0 7pt; padding-left: 16pt; }
+  .say {
+    border-left: 3px solid #1f6feb; background: #f2f7ff;
+    padding: 6pt 9pt; margin: 5pt 0 8pt; font-style: italic;
+  }
+  .say b { font-style: normal; }
+  .do {
+    background: #15181c; color: #fff; padding: 2pt 7pt;
+    border-radius: 3px; font-weight: 700; font-size: 9.5pt;
+    display: inline-block; letter-spacing: 0.2pt;
+  }
+  .warn { border-left: 3px solid #b8860b; background: #fffaef; padding: 6pt 9pt; margin: 6pt 0; }
+  table { border-collapse: collapse; width: 100%; margin: 5pt 0 8pt; font-size: 9.5pt; }
+  th, td { border: 1px solid #d2d7dd; padding: 4pt 6pt; text-align: left; vertical-align: top; }
+  th { background: #f4f6f8; font-weight: 700; }
+  code { font: 9.5pt ui-monospace, Menlo, monospace; background: #f0f2f4; padding: 1pt 3pt; border-radius: 2px; }
+  .screen { color: #5d666f; font-size: 8.5pt; letter-spacing: 1pt; text-transform: uppercase; }
+  .pill { background: #e8f5e9; border: 1px solid #a5d6a7; padding: 1pt 5pt; border-radius: 3px; font-size: 9pt; }
+  .pb { page-break-before: always; }
+  .lead { font-size: 11pt; }
+</style>
+</head>
+<body>
+
+<h1>CALIPER: the live demo</h1>
+<p class="sub">Dan's run sheet. KSU Coles x ResultsCX, Friday September 18, 1:00pm.</p>
+
+<p class="lead">You are running the demo. The whole argument lands in one sentence, so say it before you
+touch anything:</p>
+<div class="say"><b>"Everybody else grades the workers. We grade the test."</b></div>
+
+<p>A quality form decides who gets coached, who goes on a performance plan, and sometimes who keeps a
+job. Nobody had checked whether that form can measure anything. That is the entire product.</p>
+
+<h2>Before the room, five minutes</h2>
+<ol>
+  <li>Laptop on <code>https://caliper-77ma.onrender.com</code>, sitting on screen 01.
+      <b>Do not press Run the audit yet.</b> The first press is the demo.</li>
+  <li>The page can take about 30 seconds to wake the first time. Load it early so the room
+      never watches it boot.</li>
+  <li>Phone: CALIPER on the home screen, screen timeout set to never.</li>
+  <li>For the live call, Stephen runs <code>scripts/demo_phone.sh</code> and hands you a URL.
+      Type it into the app's <b>Connect</b> screen. Do this before you walk up, not on stage.</li>
+</ol>
+
+<h2>The demo, click by click</h2>
+
+<h3><span class="screen">Screen 01 / intake</span></h3>
+<p>Say the one sentence. Then:</p>
+<p><span class="do">CLICK "Run the audit"</span></p>
+<p>It computes live, in front of them. A run id appears top right, like <code>RUN-AF91F4C3</code>,
+and next to it the state <code>AWAITING_APPROVAL</code>. Point at it. That id is the thread through
+the whole rest of the demo.</p>
+
+<h3><span class="screen">Screen 02 / instrument audit</span></h3>
+<p>Three tabs, one per form. The numbers that appear:</p>
+<table>
+  <tr><th>Form</th><th>KR-20</th><th>95% interval</th><th>Unusable items</th></tr>
+  <tr><td>Member Experience</td><td>0.4661</td><td>-0.019 to 0.776</td><td>5 of 9</td></tr>
+  <tr><td>Business Process</td><td>0.4155</td><td>-0.224 to 0.764</td><td>2 of 4</td></tr>
+  <tr><td>Compliance</td><td>0.3101</td><td>-0.309 to 0.709</td><td>10 of 10</td></tr>
+</table>
+<div class="say">"All three forms have a 95 percent confidence interval whose lower bound sits at or
+below zero. Not one of them can be shown to work on this sample."</div>
+<p><b>Compliance is the punch. Land it slowly.</b> Seven of ten questions have never once
+distinguished any two calls, and that includes the item recording HIPAA verification.</p>
+<div class="say">"A question everybody passes is not a control. It is a habit."</div>
+
+<h3><span class="screen">Screen 03 / diagnosis</span></h3>
+<p>The defect: <b>"Explained Options/Resolution in a Clear, Organized and Appropriate Manner."</b>
+Fails 14 of 17 evaluations across 8 of 10 agents. That is the 82 percent.</p>
+<p>Two things to point at, because they are what a technical judge checks:</p>
+<ul>
+  <li><b>Corroboration is scanned, not assumed.</b> The phi coefficient sits next to the co-failure
+      count, and a pairing below the floor is not called corroboration.</li>
+  <li><b>Two alternatives rejected, on the record.</b> Not hidden.</li>
+</ul>
+
+<h3 class="pb"><span class="screen">Screen 04 / human validation. This is your moment.</span></h3>
+<p>Before you click anything, show them the four buttons are <b>greyed out</b>.</p>
+<p><span class="do">TYPE your name in "who is deciding"</span></p>
+<p>The buttons light up only now. Say why:</p>
+<div class="say">"Four actions, not two, because approve or not is not how a reviewer actually
+thinks. Approve, edit, reject, request more evidence. Nothing downstream can run until a person
+moves this, and every transition goes in a ledger with who decided."</div>
+<p><span class="do">CLICK "Approve"</span></p>
+<p>The state flips to <code>INTERVENTION_GENERATED</code> and screens 05, 06 and 07 appear.
+Say the line that separates this from a disclaimer:</p>
+<div class="say">"The decision became the run state. Kill the process and restart it and the run
+resumes from approved. No re-prompt has happened anywhere in this."</div>
+
+<h3><span class="screen">Screen 05 / intervention</span></h3>
+<p>The rewritten question, before and after. The old one was scored on reviewer judgement. The new
+one is scored on an observation: did the member restate, in their own words, what they owe.</p>
+<p>The chain is drawn, not described: <code>DIAG-001</code> to <code>OBJ-001</code> to
+<code>ACT-001</code> to <code>SIM-001</code> to <code>METRIC-001</code>.</p>
+<p><span class="do">CLICK "Download the design workbook" and OPEN it</span></p>
+<p>Six tabs, in ResultsCX's own schema and their own order, from this one run.</p>
+<div class="say">"Your own template workbook has a purple box on six tabs. The legend says: copy
+this prompt, fill in the brackets, attach the files, send. That is six manual re-prompts across six
+tabs. This is the same six artifacts, from one run, without anyone pasting anything."</div>
+
+<h3><span class="screen">Screen 06 / practice and proof</span></h3>
+<div class="warn"><b>On the public website this screen says it cannot take a live call. That is on
+purpose and you should say so out loud, not apologise for it.</b></div>
+<div class="say">"This public instance deliberately holds no cloud credentials, because a public box
+with credentials is a liability. Everything else on this screen is real. The call runs against our
+own backend."</div>
+<p>Then run the call on the laptop, or on the phone if Stephen has the tunnel up. The member is
+synthetic and <b>you say that every single time</b>. Her plan mechanics are real and public.
+The criteria fill in during the conversation, scored by code, not by a model.</p>
+
+<h3><span class="screen">Screen 07 / what being wrong costs</span></h3>
+<table>
+  <tr><th>One curriculum hour at 17.47 designer hours</th><th>USA</th><th>Mexico</th><th>Philippines</th></tr>
+  <tr><td>Build cost</td><td>$870.88</td><td>$248.95</td><td>$113.38</td></tr>
+  <tr><td>Built on a wrong diagnosis, so built twice</td><td>$1,741.76</td><td>$497.90</td><td>$226.76</td></tr>
+</table>
+<div class="say">"Offshoring cuts the build cost by 87 percent and does nothing about building the
+wrong thing. Offshoring without fixing the instrument means being wrong more cheaply."</div>
+
+<h2>If something breaks</h2>
+<table>
+  <tr><th>What happened</th><th>What you do</th></tr>
+  <tr><td>The call will not connect</td><td>Say it in one sentence, play the recording, narrate over it, keep going. Do not debug on stage.</td></tr>
+  <tr><td>The tunnel is down</td><td>The laptop demo needs no tunnel. Skip the phone beat entirely.</td></tr>
+  <tr><td>The laptop dies</td><td>Open <code>caliper-77ma.onrender.com/judge</code> on a phone. Everything but the call is there.</td></tr>
+  <tr><td>A number looks wrong</td><td>Read what is on the screen, not what you memorised. The screen is computed live and it is right.</td></tr>
+  <tr><td>You are running long</td><td>Cut the workbook download and screen 07. <b>Never cut the audit or the gate.</b> Those are 50 percent of the rubric.</td></tr>
+  <tr><td>Page looks stuck loading</td><td>The free host sleeps. Reload once. It wakes in about 30 seconds.</td></tr>
+</table>
+
+<h2>Questions you will get</h2>
+<h3>"So your AI just refuses to do the job?"</h3>
+<div class="say">"It declines the one claim the evidence cannot support, and it hands over the
+protocol that would fix it instead of going quiet. Double score a set of calls across both
+evaluators and evaluator severity becomes separable from agent ability. That is one afternoon of
+work, and it is on the screen."</div>
+
+<h3>"Where is the AI?"</h3>
+<div class="say">"One model call in the entire system, and it is the synthetic member speaking on
+the practice call. Every number, every sentence, the objectives and the whole workbook are plain
+Python. There is a test that fails the build if a second model call ever appears."</div>
+
+<h3>"Is this real data?"</h3>
+<div class="say">"The evaluations are the supplied export. The member on the practice call is
+synthetic and we say so every time. No agent or member identifier appears on any surface."</div>
+
+<h3>"How do we know the numbers are right?"</h3>
+<div class="say">"Press the button again, it recomputes. The interval is on screen next to every
+point estimate, and we cross check the reliability against pingouin."</div>
+
+<h2>Numbers to have cold</h2>
+<ul>
+  <li><span class="pill">82%</span> is 14 of 17 evaluations, across 8 of 10 agents.</li>
+  <li><span class="pill">2 of 10</span> linkage fragility. Two evaluators, and every comparison
+      passes through two agents.</li>
+  <li><span class="pill">0 of 17</span> calls were scored by both evaluators. Zero.</li>
+  <li><span class="pill">7 of 10</span> Compliance items never distinguished anything.</li>
+  <li><span class="pill">13 of 13</span> golden tests pass, and they run live, not from a recording.</li>
+</ul>
+
+<p style="margin-top:14pt; color:#5d666f; font-size:9pt;">
+If anything on this sheet does not match what the screen says, the screen is right. Message Stephen
+before 1:00pm rather than during.</p>
+
+</body>
+</html>
